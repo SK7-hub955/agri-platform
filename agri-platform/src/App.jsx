@@ -906,3 +906,4 @@ export default function App() {
     </Shell>
   );
 }
+export default function App() {}
