@@ -316,8 +316,30 @@ function AuthScreen({ onLogin }) {
     if (selectedRoles.length === 0) { setError("Select at least one role."); return; }
 
     const existing = DB.users.find(u => u.email === email);
+    
     if (existing) {
-      setError("An account already exists with that email. Please login.");
+      // Allow adding new roles to existing account
+      const newRoles = [...new Set([...existing.roles, ...selectedRoles])]; // Merge and deduplicate
+      
+      if (existing.password !== password) {
+        setError("Password mismatch. Please use the password associated with this email.");
+        return;
+      }
+      
+      DB.update("users", u => u.email === email, { roles: newRoles, role: newRoles[0] });
+      DB.recordAction(existing.id, "add_roles", { newRoles });
+      
+      if (!existing.verified) {
+        const code = generateVerificationCode();
+        DB.update("users", u => u.email === email, { verificationCode: code });
+        sendVerificationCodeToGmail(email, code, existing.name);
+        setVerificationEmail(email);
+        setStage("verify");
+        setMessage("Roles added! A verification code has been sent to your Gmail to complete the process.");
+      } else {
+        setMessage("Roles added successfully! You can now use these roles to login.");
+        setTimeout(() => setTab("login"), 2000);
+      }
       return;
     }
 
