@@ -1024,8 +1024,8 @@ function TransportDeliveries({ user }) {
    Market Prices, Earnings, Route Map
    =========================== */
 function MarketPricesPage() {
-  const [livePrices, setLivePrices] = useState(DB.marketPrices);
-  const [provider, setProvider] = useState('local fallback');
+  const [livePrices, setLivePrices] = useState([]);
+  const [provider, setProvider] = useState('Silv Data');
   const [priceError, setPriceError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -1035,14 +1035,14 @@ function MarketPricesPage() {
       setIsLoading(true);
       const data = await fetchMarketPrices();
       if (!mounted) return;
-      if (data.success && data.prices.length > 0) {
+      if (data.success && data.source === 'Silv Data' && data.prices.length > 0) {
         setLivePrices(data.prices);
-        setProvider(data.source || 'verified provider');
+        setProvider('Silv Data');
         setPriceError(null);
       } else {
-        setLivePrices(DB.marketPrices);
-        setProvider('fallback');
-        setPriceError(data.error || 'Using cached fallback prices');
+        setLivePrices([]);
+        setProvider(data.source || 'Silv Data');
+        setPriceError(data.error || 'Silv commodity prices are currently unavailable.');
       }
       setIsLoading(false);
     };
@@ -1061,24 +1061,30 @@ function MarketPricesPage() {
         {isLoading && <div style={{ fontSize: 12, color: "#666" }}>Refreshing prices…</div>}
       </div>
       {priceError && <div style={{ marginBottom: 16, color: "#C62828", fontSize: 13, padding: "12px 14px", background: "#FFEBEE", borderRadius: 12 }}><strong>Notice:</strong> {priceError}</div>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 16, marginBottom: 24 }}>
-        {livePrices.map((m, i) => (
-          <div key={i} className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 150 }}>
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#1B4332" }}>{m.crop}</div>
-              <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{m.symbol || 'Verified commodity price'}</div>
-              {m.unit && <div style={{ fontSize: 11, color: "#666", marginTop: 6 }}>Unit: {m.unit}</div>}
-            </div>
-            <div style={{ marginTop: 14, textAlign: "right" }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#2E7D32" }}>{m.price}</div>
-              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 6 }}>
-                <span style={{ fontSize: 13, color: m.trend === "up" ? "#2E7D32" : m.trend === "down" ? "#C62828" : "#888", fontWeight: 600 }}>{m.trend === "up" ? "↑" : m.trend === "down" ? "↓" : "→"} {m.change}</span>
-                {m.source && <span style={{ fontSize: 11, color: "#555", background: "#F1F8E9", padding: "3px 8px", borderRadius: 10 }}>{m.source}</span>}
+      {livePrices.length === 0 && !isLoading ? (
+        <div style={{ marginBottom: 24, padding: 18, background: "#FFF8E1", borderRadius: 14, color: "#795548" }}>
+          No Silv commodity prices are available right now. Please check back later or ensure the backend is configured to fetch data from Silv.
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 16, marginBottom: 24 }}>
+          {livePrices.map((m, i) => (
+            <div key={i} className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 150 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#1B4332" }}>{m.crop}</div>
+                <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{m.symbol || 'Silv commodity'}</div>
+                {m.unit && <div style={{ fontSize: 11, color: "#666", marginTop: 6 }}>Unit: {m.unit}</div>}
+              </div>
+              <div style={{ marginTop: 14, textAlign: "right" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#2E7D32" }}>{m.price}</div>
+                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 6 }}>
+                  <span style={{ fontSize: 13, color: m.trend === "up" ? "#2E7D32" : m.trend === "down" ? "#C62828" : "#888", fontWeight: 600 }}>{m.trend === "up" ? "↑" : m.trend === "down" ? "↓" : "→"} {m.change}</span>
+                  {m.source && <span style={{ fontSize: 11, color: "#555", background: "#F1F8E9", padding: "3px 8px", borderRadius: 10 }}>{m.source}</span>}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
       <div className="card" style={{ background: "#F9FBF7" }}>
         <h3 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 20, color: "#1B4332", marginBottom: 16 }}>AI Price Predictions (Next Season)</h3>
         <table className="tbl" style={{ width: "100%", borderCollapse: "collapse" }}>
