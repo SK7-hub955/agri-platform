@@ -1,45 +1,133 @@
 import React, { useState, useEffect } from "react";
 
-/* ===========================
-   In-memory demo database
-   =========================== */
-const DB = {
-  users: [
-    { id: 1, name: "John Banda", email: "john@farm.zm", password: "pass123", role: "customer", avatar: "JB", location: "Lusaka" },
-    { id: 2, name: "Green Valley Farms", email: "gvf@supplier.zm", password: "pass123", role: "supplier", avatar: "GV", location: "Chisamba", products: ["Maize", "Soybeans", "Groundnuts"] },
-    { id: 3, name: "Swift Cargo Ltd", email: "swift@transport.zm", password: "pass123", role: "transport", avatar: "SC", location: "Kabwe", truckType: "3-ton pickup", available: true },
-  ],
-  products: [
-    { id: 1, name: "Hybrid Maize Seed (SC403)", supplierId: 2, category: "Seeds", price: 285, unit: "25kg bag", stock: 120, season: "Nov–Jan", predictedAvail: "Oct 2026", predictedPrice: 310, demand: "High", img: "🌽" },
-    { id: 2, name: "Soybean Seed (Hernon 147)", supplierId: 2, category: "Seeds", price: 320, unit: "25kg bag", stock: 80, season: "Nov–Dec", predictedAvail: "Oct 2026", predictedPrice: 340, demand: "Medium", img: "🫘" },
-    { id: 3, name: "D-Compound Fertilizer", supplierId: 2, category: "Fertilizer", price: 450, unit: "50kg bag", stock: 200, season: "All year", predictedAvail: "Now", predictedPrice: 470, demand: "High", img: "🧪" },
-    { id: 4, name: "Urea (Nitrogen Top Dressing)", supplierId: 2, category: "Fertilizer", price: 380, unit: "50kg bag", stock: 150, season: "All year", predictedAvail: "Now", predictedPrice: 395, demand: "Medium", img: "⚗️" },
-    { id: 5, name: "Groundnut Seed (Chalimbana)", supplierId: 2, category: "Seeds", price: 220, unit: "20kg bag", stock: 60, season: "Nov–Dec", predictedAvail: "Sep 2026", predictedPrice: 250, demand: "Low", img: "🥜" },
-    { id: 6, name: "Tomato Seedlings (Money Maker)", supplierId: 2, category: "Seedlings", price: 150, unit: "tray of 50", stock: 40, season: "Apr–Jun", predictedAvail: "Mar 2027", predictedPrice: 165, demand: "High", img: "🍅" },
-  ],
-  orders: [
-    { id: 1, customerId: 1, productId: 1, qty: 4, total: 1140, status: "Delivered", date: "2026-04-12", transportId: 3 },
-    { id: 2, customerId: 1, productId: 3, qty: 2, total: 900, status: "In Transit", date: "2026-05-18", transportId: 3 },
-  ],
-  deliveries: [
-    { id: 1, transportId: 3, orderId: 1, from: "Chisamba", to: "Lusaka", distance: "110 km", fee: 250, status: "Completed", date: "2026-04-14" },
-    { id: 2, transportId: 3, orderId: 2, from: "Chisamba", to: "Lusaka", distance: "110 km", fee: 250, status: "In Progress", date: "2026-05-20" },
-  ],
-  cropData: [
-    { name: "Maize", soil: "Loamy, well-drained", season: "Nov–Jan", spacing: "75cm × 25cm", fertilizer: "D-Compound + Urea", disease: "Streak Virus, Stalk Borer", yield: "4–8 t/ha", harvest: "Apr–May", img: "🌽" },
-    { name: "Soybeans", soil: "Sandy loam, pH 6–6.5", season: "Nov–Dec", spacing: "45cm × 5cm", fertilizer: "Rhizobium inoculant", disease: "Rust, Mosaic Virus", yield: "1.5–3 t/ha", harvest: "Mar–Apr", img: "🫘" },
-    { name: "Groundnuts", soil: "Sandy loam, well-drained", season: "Nov–Dec", spacing: "45cm × 15cm", fertilizer: "Low N, P-rich", disease: "Rosette, Leaf Spot", yield: "0.8–1.5 t/ha", harvest: "Mar–Apr", img: "🥜" },
-    { name: "Tomatoes", soil: "Rich loam, pH 6–6.8", season: "Apr–Jun (dry)", spacing: "60cm × 45cm", fertilizer: "High K + Ca", disease: "Blight, Bacterial Wilt", yield: "20–40 t/ha", harvest: "Jul–Sep", img: "🍅" },
-  ],
-  weather: { temp: 22, humidity: 58, rain: "3 days", condition: "Partly Cloudy", wind: "14 km/h", advisory: "Rain expected in 3 days — delay fertilizer application until after rains." },
-  marketPrices: [
-    { crop: "Maize", price: "K850/50kg", change: "+3.2%", trend: "up" },
-    { crop: "Soybeans", price: "K1,200/50kg", change: "+1.8%", trend: "up" },
-    { crop: "Groundnuts", price: "K1,800/50kg", change: "-0.5%", trend: "down" },
-    { crop: "Wheat", price: "K920/50kg", change: "+2.1%", trend: "up" },
-    { crop: "Cassava", price: "K420/50kg", change: "0.0%", trend: "flat" },
-  ],
+const STORAGE_KEY = "agriPlatformDB";
+const SESSION_KEY = "agriPlatformCurrentUser";
+
+function createDefaultDB() {
+  return {
+    users: [],
+    products: [
+      { id: 1, name: "Hybrid Maize Seed (SC403)", supplierId: null, category: "Seeds", price: 285, unit: "25kg bag", stock: 120, season: "Nov–Jan", predictedAvail: "Oct 2026", predictedPrice: 310, demand: "High", img: "🌽" },
+      { id: 2, name: "Soybean Seed (Hernon 147)", supplierId: null, category: "Seeds", price: 320, unit: "25kg bag", stock: 80, season: "Nov–Dec", predictedAvail: "Oct 2026", predictedPrice: 340, demand: "Medium", img: "🫘" },
+      { id: 3, name: "D-Compound Fertilizer", supplierId: null, category: "Fertilizer", price: 450, unit: "50kg bag", stock: 200, season: "All year", predictedAvail: "Now", predictedPrice: 470, demand: "High", img: "🧪" },
+      { id: 4, name: "Urea (Nitrogen Top Dressing)", supplierId: null, category: "Fertilizer", price: 380, unit: "50kg bag", stock: 150, season: "All year", predictedAvail: "Now", predictedPrice: 395, demand: "Medium", img: "⚗️" },
+      { id: 5, name: "Groundnut Seed (Chalimbana)", supplierId: null, category: "Seeds", price: 220, unit: "20kg bag", stock: 60, season: "Nov–Dec", predictedAvail: "Sep 2026", predictedPrice: 250, demand: "Low", img: "🥜" },
+      { id: 6, name: "Tomato Seedlings (Money Maker)", supplierId: null, category: "Seedlings", price: 150, unit: "tray of 50", stock: 40, season: "Apr–Jun", predictedAvail: "Mar 2027", predictedPrice: 165, demand: "High", img: "🍅" },
+    ],
+    orders: [],
+    deliveries: [],
+    cropData: [
+      { name: "Maize", soil: "Loamy, well-drained", season: "Nov–Jan", spacing: "75cm × 25cm", fertilizer: "D-Compound + Urea", disease: "Streak Virus, Stalk Borer", yield: "4–8 t/ha", harvest: "Apr–May", img: "🌽" },
+      { name: "Soybeans", soil: "Sandy loam, pH 6–6.5", season: "Nov–Dec", spacing: "45cm × 5cm", fertilizer: "Rhizobium inoculant", disease: "Rust, Mosaic Virus", yield: "1.5–3 t/ha", harvest: "Mar–Apr", img: "🫘" },
+      { name: "Groundnuts", soil: "Sandy loam, well-drained", season: "Nov–Dec", spacing: "45cm × 15cm", fertilizer: "Low N, P-rich", disease: "Rosette, Leaf Spot", yield: "0.8–1.5 t/ha", harvest: "Mar–Apr", img: "🥜" },
+      { name: "Tomatoes", soil: "Rich loam, pH 6–6.8", season: "Apr–Jun (dry)", spacing: "60cm × 45cm", fertilizer: "High K + Ca", disease: "Blight, Bacterial Wilt", yield: "20–40 t/ha", harvest: "Jul–Sep", img: "🍅" },
+    ],
+    weather: { temp: 22, humidity: 58, rain: "3 days", condition: "Partly Cloudy", wind: "14 km/h", advisory: "Rain expected in 3 days — delay fertilizer application until after rains." },
+    marketPrices: [
+      { crop: "Maize", price: "K850/50kg", change: "+3.2%", trend: "up" },
+      { crop: "Soybeans", price: "K1,200/50kg", change: "+1.8%", trend: "up" },
+      { crop: "Groundnuts", price: "K1,800/50kg", change: "-0.5%", trend: "down" },
+      { crop: "Wheat", price: "K920/50kg", change: "+2.1%", trend: "up" },
+      { crop: "Cassava", price: "K420/50kg", change: "0.0%", trend: "flat" },
+    ],
+    posts: [
+      { id: 1, author: "Agri Expert", role: "expert", time: "2h", text: "Use compost to improve soil structure.", likes: 12 },
+      { id: 2, author: "Supplier Network", role: "supplier", time: "1d", text: "Selling quality maize seed this season.", likes: 5 },
+    ],
+    actions: [],
+  };
+}
+
+function saveDatabase(db) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  } catch (error) {
+    console.error("Failed to save database:", error);
+  }
+}
+
+function loadDatabase() {
+  if (typeof window === "undefined") return createDefaultDB();
+  try {
+    const payload = localStorage.getItem(STORAGE_KEY);
+    if (payload) {
+      const parsed = JSON.parse(payload);
+      return {
+        ...createDefaultDB(),
+        ...parsed,
+        actions: parsed.actions || [],
+        posts: parsed.posts || createDefaultDB().posts,
+      };
+    }
+  } catch (error) {
+    console.error("Failed to load database:", error);
+  }
+  const db = createDefaultDB();
+  saveDatabase(db);
+  return db;
+}
+
+const DB = loadDatabase();
+DB.save = () => saveDatabase(DB);
+DB.query = (table, predicate = () => true) => (DB[table] || []).filter(predicate);
+DB.insert = (table, row) => { DB[table].push(row); DB.save(); return row; };
+DB.update = (table, predicate, changes) => {
+  const record = (DB[table] || []).find(predicate);
+  if (record) {
+    Object.assign(record, changes);
+    DB.save();
+  }
+  return record;
 };
+DB.delete = (table, predicate) => {
+  const tableRef = DB[table] || [];
+  const index = tableRef.findIndex(predicate);
+  if (index >= 0) {
+    tableRef.splice(index, 1);
+    DB.save();
+    return true;
+  }
+  return false;
+};
+DB.recordAction = (userId, type, details) => {
+  const action = {
+    id: Date.now(),
+    userId,
+    type,
+    details,
+    timestamp: new Date().toISOString(),
+  };
+  DB.actions.unshift(action);
+  DB.save();
+  return action;
+};
+
+function loadCurrentUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    const payload = localStorage.getItem(SESSION_KEY);
+    return payload ? JSON.parse(payload) : null;
+  } catch (error) {
+    console.error("Failed to load current user:", error);
+    return null;
+  }
+}
+
+function saveCurrentUser(user) {
+  if (typeof window === "undefined") return;
+  try {
+    if (user) {
+      const safeUser = { ...user };
+      delete safeUser.password;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(safeUser));
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch (error) {
+    console.error("Failed to save current user:", error);
+  }
+}
 
 const formatK = (n) => `K${Number(n).toLocaleString()}`;
 
@@ -133,14 +221,19 @@ function AuthScreen({ onLogin }) {
 
   const handleLogin = () => {
     const user = DB.users.find(u => u.email === email && u.password === password && u.role === role);
-    if (user) { onLogin(user); }
-    else { setError("Invalid credentials or wrong role selected."); }
+    if (user) {
+      DB.recordAction(user.id, "login", { email: user.email, role: user.role });
+      onLogin(user);
+    } else {
+      setError("Invalid credentials or wrong role selected.");
+    }
   };
 
   const handleRegister = () => {
     if (!name || !email || !password) { setError("Please fill all fields."); return; }
     const newUser = { id: Date.now(), name, email, password, role, avatar: name.slice(0,2).toUpperCase(), location: "Zambia" };
-    DB.users.push(newUser);
+    DB.insert("users", newUser);
+    DB.recordAction(newUser.id, "register", { email: newUser.email, role: newUser.role });
     onLogin(newUser);
   };
 
@@ -197,19 +290,6 @@ function AuthScreen({ onLogin }) {
           <button className="auth-btn" style={{ marginTop: 20 }} onClick={tab === "login" ? handleLogin : handleRegister}>
             {tab === "login" ? "Sign In to AgriConnect" : "Create Account"}
           </button>
-
-          {tab === "login" && (
-            <div style={{ marginTop: 16, padding: "12px", background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>
-              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", textAlign: "center", marginBottom: 6 }}>Demo accounts (password: pass123)</p>
-              <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-                {DB.users.map(u => (
-                  <button key={u.id} onClick={() => { setEmail(u.email); setPassword("pass123"); setRole(u.role); }} style={{ padding: "4px 10px", background: "rgba(124,179,66,0.2)", border: "1px solid rgba(124,179,66,0.4)", borderRadius: 4, color: "#a5d6a7", fontSize: 11, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                    {u.avatar}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -239,17 +319,21 @@ function CustomerMarket({ user }) {
 
   const placeOrder = () => {
     if (cart.length === 0) return;
-    const newOrders = cart.map(item => ({
-      id: makeId(),
-      customerId: user.id,
-      productId: item.id,
-      qty: item.qty,
-      total: item.price * item.qty,
-      status: "Pending",
-      date: new Date().toISOString().split("T")[0],
-      transportId: null
-    }));
-    newOrders.forEach(o => DB.orders.push(o));
+    const newOrders = cart.map(item => {
+      const order = {
+        id: makeId(),
+        customerId: user.id,
+        productId: item.id,
+        qty: item.qty,
+        total: item.price * item.qty,
+        status: "Pending",
+        date: new Date().toISOString().split("T")[0],
+        transportId: null
+      };
+      DB.insert("orders", order);
+      return order;
+    });
+    DB.recordAction(user.id, "place_order", { orderIds: newOrders.map(o => o.id), total: total, items: cart.map(item => ({ productId: item.id, qty: item.qty, price: item.price })) });
     setCart([]);
     setOrdered(true);
     setTimeout(() => setOrdered(false), 3000);
@@ -447,10 +531,7 @@ function CropsPage() {
    =========================== */
 function CommunityPage({ user }) {
   const [newPost, setNewPost] = useState("");
-  const [posts, setPosts] = useState([
-    { id: 1, author: "Agri Expert", role: "expert", time: "2h", text: "Use compost to improve soil structure.", likes: 12 },
-    { id: 2, author: "Green Valley Farms", role: "supplier", time: "1d", text: "Selling quality maize seed this season.", likes: 5 },
-  ]);
+  const [posts, setPosts] = useState(() => DB.posts || []);
 
   const post = () => {
     if (!newPost.trim()) return;
@@ -462,6 +543,8 @@ function CommunityPage({ user }) {
       text: newPost.trim(),
       likes: 0
     };
+    DB.insert("posts", p);
+    DB.recordAction(user.id, "community_post", { postId: p.id, text: p.text });
     setPosts(prev => [p, ...prev]);
     setNewPost("");
   };
@@ -552,7 +635,9 @@ function SupplierInventory({ user }) {
   const [added, setAdded] = useState(false);
   const submit = () => {
     if (!form.name || !form.price) return;
-    DB.products.push({ id: Date.now(), ...form, price: +form.price, stock: +form.stock, supplierId: user.id, predictedAvail: "TBD", predictedPrice: +form.price * 1.05, demand: "Medium", img: "📦" });
+    const newProduct = { id: Date.now(), ...form, price: +form.price, stock: +form.stock, supplierId: user.id, predictedAvail: "TBD", predictedPrice: +form.price * 1.05, demand: "Medium", img: "📦" };
+    DB.insert("products", newProduct);
+    DB.recordAction(user.id, "add_product", { productId: newProduct.id, name: newProduct.name, price: newProduct.price });
     setAdded(true); setForm({ name: "", category: "Seeds", price: "", unit: "", stock: "", season: "" });
     setTimeout(() => setAdded(false), 2500);
   };
@@ -717,7 +802,11 @@ function TransportDeliveries({ user }) {
                 <div>📅 Order date: {o.date}</div>
                 <div style={{ fontWeight: 700, color: "#2E7D32", fontSize: 15 }}>Delivery fee: K250</div>
               </div>
-              <button className="btn-primary" style={{ width: "100%", marginTop: 14 }} onClick={() => { o.transportId = user.id; o.status = "In Transit"; alert("Delivery accepted! Navigate to Chisamba to pick up the order."); }}>Accept Delivery</button>
+              <button className="btn-primary" style={{ width: "100%", marginTop: 14 }} onClick={() => {
+              DB.update("orders", item => item.id === o.id, { transportId: user.id, status: "In Transit" });
+              DB.recordAction(user.id, "accept_delivery", { orderId: o.id, customerId: o.customerId });
+              alert("Delivery accepted! Navigate to Chisamba to pick up the order.");
+            }}>Accept Delivery</button>
             </div>
           );
         })}
@@ -820,12 +909,27 @@ function RouteMapPage() {
    Root App
    =========================== */
 export default function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(loadCurrentUser);
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  useEffect(() => { if (user) setActiveTab("dashboard"); }, [user]);
+  useEffect(() => {
+    if (user) {
+      saveCurrentUser(user);
+      setActiveTab("dashboard");
+    }
+  }, [user]);
 
-  if (!user) return <AuthScreen onLogin={setUser} />;
+  const handleLogin = (userData) => {
+    saveCurrentUser(userData);
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    saveCurrentUser(null);
+    setUser(null);
+  };
+
+  if (!user) return <AuthScreen onLogin={handleLogin} />;
 
   const renderContent = () => {
     if (user.role === "customer") {
@@ -853,7 +957,7 @@ export default function App() {
   };
 
   return (
-    <Shell user={user} onLogout={() => setUser(null)} activeTab={activeTab} setActiveTab={setActiveTab}>
+    <Shell user={user} onLogout={handleLogout} activeTab={activeTab} setActiveTab={setActiveTab}>
       {renderContent()}
     </Shell>
   );
