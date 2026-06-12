@@ -35,8 +35,8 @@ transporter.verify((error, success) => {
 });
 
 const DEFAULT_MARKET_PRICES = [
-  { crop: "Maize", symbol: "ZC", unit: "bushel", price: "K850/50kg", change: "+3.2%", trend: "up" },
-  { crop: "Soybeans", symbol: "ZS", unit: "bushel", price: "K1,200/50kg", change: "+1.8%", trend: "up" },
+  { crop: "Maize", symbol: "ZC", unit: "bushel", price: "K300/50kg", change: "+3.2%", trend: "up" },
+  { crop: "Soybeans", symbol: "ZS", unit: "bushel", price: "K400/kg", change: "+1.8%", trend: "up" },
   { crop: "Groundnuts", symbol: "GN", unit: "kg", price: "K1,800/50kg", change: "-0.5%", trend: "down" },
   { crop: "Wheat", symbol: "ZW", unit: "bushel", price: "K920/50kg", change: "+2.1%", trend: "up" },
   { crop: "Cassava", symbol: "CC", unit: "kg", price: "K420/50kg", change: "0.0%", trend: "flat" },

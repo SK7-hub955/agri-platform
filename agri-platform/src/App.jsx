@@ -25,8 +25,8 @@ function createDefaultDB() {
     ],
     weather: { temp: 22, humidity: 58, rain: "3 days", condition: "Partly Cloudy", wind: "14 km/h", advisory: "Rain expected in 3 days — delay fertilizer application until after rains." },
     marketPrices: [
-      { crop: "Maize", price: "K850/50kg", change: "+3.2%", trend: "up" },
-      { crop: "Soybeans", price: "K1,200/50kg", change: "+1.8%", trend: "up" },
+      { crop: "Maize", price: "K300/50kg", change: "+3.2%", trend: "up" },
+      { crop: "Soybeans", price: "K400/kg", change: "+1.8%", trend: "up" },
       { crop: "Groundnuts", price: "K1,800/50kg", change: "-0.5%", trend: "down" },
       { crop: "Wheat", price: "K920/50kg", change: "+2.1%", trend: "up" },
       { crop: "Cassava", price: "K420/50kg", change: "0.0%", trend: "flat" },
@@ -672,20 +672,7 @@ function CustomerDashboard({ user }) {
           </table>
         </div>
 
-        <div className="card">
-          <h3 style={{ fontFamily: "'Crimson Pro', serif", fontSize: 20, color: "#1B4332", marginBottom: 16 }}>Today's Market Prices</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {DB.marketPrices.map((m, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#F9FBF7", borderRadius: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 500 }}>{m.crop}</span>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1B4332" }}>{m.price}</div>
-                  <div style={{ fontSize: 11, color: m.trend === "up" ? "#2E7D32" : m.trend === "down" ? "#C62828" : "#888" }}>{m.trend === "up" ? "↑" : m.trend === "down" ? "↓" : "→"} {m.change}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <LivePricesDashboardWidget />
       </div>
     </div>
   );
@@ -811,6 +798,8 @@ function SupplierDashboard({ user }) {
           </div>
         ))}
       </div>
+
+      <LivePricesDashboardWidget />
 
       <div className="card">
         <h3 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 20, color: "#1B4332", marginBottom: 16 }}>My Product Performance</h3>
@@ -943,6 +932,8 @@ function TransportDashboard({ user }) {
           </div>
         ))}
       </div>
+
+      <LivePricesDashboardWidget />
 
       <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 20 }}>
         <div className="card">
@@ -1103,6 +1094,64 @@ function MarketPricesPage() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function LivePricesDashboardWidget() {
+  const [livePrices, setLivePrices] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
+      const data = await fetchMarketPrices();
+      if (!mounted) return;
+      if (data.success && data.prices.length > 0) {
+        setLivePrices(data.prices.slice(0, 4));
+        setUseFallback(false);
+      } else {
+        setLivePrices(DB.marketPrices.slice(0, 4));
+        setUseFallback(true);
+        setError(data.error || 'Live Silv commodity data is unavailable. Showing local merchant prices instead.');
+      }
+      setIsLoading(false);
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  return (
+    <div className="card" style={{ marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <h3 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 20, color: "#1B4332", marginBottom: 6 }}>Live Commodity Prices</h3>
+          <div style={{ fontSize: 12, color: "#666" }}>{useFallback ? 'Local merchant prices' : 'Updated from Silv Data'}</div>
+        </div>
+        {isLoading && <div style={{ fontSize: 12, color: "#2E7D32" }}>Refreshing prices…</div>}
+      </div>
+      {useFallback && <div style={{ marginBottom: 16, color: "#795548", fontSize: 13, padding: "12px 14px", background: "#FFF8E1", borderRadius: 12 }}>Live Silv data is unavailable, so local merchant prices are shown instead.</div>}
+      {livePrices.length === 0 && !isLoading ? (
+        <div style={{ color: "#555", fontSize: 13, background: "#F9FBF7", borderRadius: 12, padding: 16 }}>No commodity prices are available right now.</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
+          {livePrices.map((item, index) => (
+            <div key={index} style={{ background: '#F1F4ED', borderRadius: 12, padding: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1B4332' }}>{item.crop}</div>
+              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{item.symbol || item.source || 'Merchant price'}</div>
+              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#2E7D32' }}>{item.price}</div>
+                <div style={{ fontSize: 12, color: item.trend === 'up' ? '#2E7D32' : item.trend === 'down' ? '#C62828' : '#555', fontWeight: 600 }}>{item.trend === 'up' ? '↑' : item.trend === 'down' ? '↓' : '→'} {item.change}</div>
+              </div>
+              {item.unit && <div style={{ marginTop: 8, fontSize: 11, color: '#555' }}>Unit: {item.unit}</div>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
