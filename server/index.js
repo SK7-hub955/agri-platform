@@ -54,6 +54,100 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Weather from Open-Meteo by geographic coordinates
+app.get('/api/weather', async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    if (!lat || !lon) {
+      return res.status(400).json({ success: false, error: 'Missing latitude or longitude' });
+    }
+
+    const url = new URL('https://api.open-meteo.com/v1/forecast');
+    url.searchParams.set('latitude', lat);
+    url.searchParams.set('longitude', lon);
+    url.searchParams.set('current_weather', 'true');
+    url.searchParams.set('temperature_unit', 'celsius');
+    url.searchParams.set('windspeed_unit', 'kmh');
+    url.searchParams.set('precipitation_unit', 'mm');
+    url.searchParams.set('relativehumidity_2m', 'true');
+    url.searchParams.set('timezone', 'auto');
+    url.searchParams.set('hourly', 'relativehumidity_2m,precipitation_probability');
+
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Open-Meteo returned status ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const current = payload.current_weather;
+    if (!current) {
+      throw new Error('Open-Meteo did not return current weather');
+    }
+
+    const hourlyTimes = payload.hourly?.time || [];
+    const humidityValues = payload.hourly?.relativehumidity_2m || [];
+    const precipitationValues = payload.hourly?.precipitation_probability || [];
+    const timeIndex = hourlyTimes.indexOf(current.time);
+    const humidity = timeIndex >= 0 ? humidityValues[timeIndex] : null;
+    const precipitationProbability = timeIndex >= 0 ? precipitationValues[timeIndex] : null;
+
+    const weatherCodeMap = {
+      0: 'Clear sky',
+      1: 'Mainly clear',
+      2: 'Partly cloudy',
+      3: 'Overcast',
+      45: 'Fog',
+      48: 'Depositing rime fog',
+      51: 'Light drizzle',
+      53: 'Moderate drizzle',
+      55: 'Dense drizzle',
+      56: 'Freezing drizzle',
+      57: 'Freezing drizzle',
+      61: 'Slight rain',
+      63: 'Moderate rain',
+      65: 'Heavy rain',
+      66: 'Freezing rain',
+      67: 'Heavy freezing rain',
+      71: 'Slight snow',
+      73: 'Moderate snow',
+      75: 'Heavy snow',
+      77: 'Snow grains',
+      80: 'Slight rain showers',
+      81: 'Moderate rain showers',
+      82: 'Violent rain showers',
+      85: 'Slight snow showers',
+      86: 'Heavy snow showers',
+      95: 'Thunderstorm',
+      96: 'Thunderstorm with hail',
+      99: 'Thunderstorm with heavy hail',
+    };
+
+    const condition = weatherCodeMap[current.weathercode] || 'Local weather';
+    const rainAdvisory = precipitationProbability >= 40 ? 'Carry an umbrella today.' : 'Dry conditions expected.';
+
+    return res.json({
+      success: true,
+      weather: {
+        temp: current.temperature,
+        condition,
+        wind: current.windspeed != null ? `${current.windspeed} km/h` : null,
+        windDirection: current.winddirection != null ? `${current.winddirection}°` : null,
+        humidity,
+        precipitationProbability,
+        rain: precipitationProbability != null ? `${precipitationProbability}%` : 'Unknown',
+        advisory: rainAdvisory,
+        source: 'Open-Meteo',
+        timestamp: current.time,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Weather fetch failed:', error.message);
+    return res.status(200).json({ success: false, error: error.message });
+  }
+});
+
 // Market prices from a verified source or fallback
 app.get('/api/market-prices', async (req, res) => {
   try {

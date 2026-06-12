@@ -31,8 +31,8 @@ const DB = {
   ],
   weather: { temp: 22, humidity: 58, rain: "3 days", condition: "Partly Cloudy", wind: "14 km/h", advisory: "Rain expected in 3 days — delay fertilizer application until after rains." },
   marketPrices: [
-    { crop: "Maize", price: "K850/50kg", change: "+3.2%", trend: "up" },
-    { crop: "Soybeans", price: "K1,200/50kg", change: "+1.8%", trend: "up" },
+    { crop: "Maize", price: "K300/50kg", change: "+3.2%", trend: "up" },
+    { crop: "Soybeans", price: "K400/kg", change: "+1.8%", trend: "up" },
     { crop: "Groundnuts", price: "K1,800/50kg", change: "-0.5%", trend: "down" },
     { crop: "Wheat", price: "K920/50kg", change: "+2.1%", trend: "up" },
     { crop: "Cassava", price: "K420/50kg", change: "0.0%", trend: "flat" },

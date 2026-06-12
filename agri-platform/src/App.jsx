@@ -23,7 +23,7 @@ function createDefaultDB() {
       { name: "Groundnuts", soil: "Sandy loam, well-drained", season: "Nov–Dec", spacing: "45cm × 15cm", fertilizer: "Low N, P-rich", disease: "Rosette, Leaf Spot", yield: "0.8–1.5 t/ha", harvest: "Mar–Apr", img: "🥜", image: "https://images.unsplash.com/photo-1490276481064-6e8c91b40aaf?auto=format&fit=crop&w=800&q=80" },
       { name: "Tomatoes", soil: "Rich loam, pH 6–6.8", season: "Apr–Jun (dry)", spacing: "60cm × 45cm", fertilizer: "High K + Ca", disease: "Blight, Bacterial Wilt", yield: "20–40 t/ha", harvest: "Jul–Sep", img: "🍅", image: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=800&q=80" },
     ],
-    weather: { temp: 22, humidity: 58, rain: "3 days", condition: "Partly Cloudy", wind: "14 km/h", advisory: "Rain expected in 3 days — delay fertilizer application until after rains." },
+    weather: { temp: 22, humidity: 58, rain: "4 months", condition: "Partly Cloudy", wind: "14 km/h", advisory: "Rain expected in 4 months." },
     marketPrices: [
       { crop: "Maize", price: "K300/50kg", change: "+3.2%", trend: "up" },
       { crop: "Soybeans", price: "K400/kg", change: "+1.8%", trend: "up" },
@@ -183,6 +183,43 @@ function saveCurrentUser(user) {
   }
 }
 
+const WEATHER_STORAGE_KEY = "agriPlatformWeather";
+
+function loadSavedWeather() {
+  if (typeof window === "undefined") return null;
+  try {
+    const payload = localStorage.getItem(WEATHER_STORAGE_KEY);
+    return payload ? JSON.parse(payload) : null;
+  } catch (error) {
+    console.error("Failed to load saved weather:", error);
+    return null;
+  }
+}
+
+function saveWeather(weather) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(WEATHER_STORAGE_KEY, JSON.stringify(weather));
+  } catch (error) {
+    console.error("Failed to save weather:", error);
+  }
+}
+
+async function fetchWeatherByCoords(lat, lon) {
+  try {
+    const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+    const response = await fetch(`${apiUrl}/api/weather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
+    const data = await response.json();
+    if (!data || !data.success || !data.weather) {
+      throw new Error(data?.error || "Invalid weather response");
+    }
+    return data.weather;
+  } catch (error) {
+    console.error("❌ Failed to fetch weather by coordinates:", error.message);
+    return null;
+  }
+}
+
 async function fetchMarketPrices() {
   try {
     const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
@@ -203,12 +240,16 @@ const formatK = (n) => `K${Number(n).toLocaleString()}`;
 /* ===========================
    Shared UI Shell
    =========================== */
-function Shell({ user, onLogout, children, activeTab, setActiveTab }) {
+function Shell({ user, onLogout, children, activeTab, setActiveTab, weather }) {
   const navItems = user.role === "customer"
     ? [["dashboard","📊","Dashboard"],["market","🛒","Market"],["crops","🌾","Crops"],["weather","🌤","Weather"],["community","💬","Community"]]
     : user.role === "supplier"
     ? [["dashboard","📊","Dashboard"],["inventory","📦","Inventory"],["orders","📋","Orders"],["market","📈","Prices"],["community","💬","Community"]]
     : [["dashboard","📊","Dashboard"],["deliveries","🚚","Deliveries"],["map","🗺","Route Map"],["earnings","💰","Earnings"],["community","💬","Community"]];
+
+  const weatherText = weather?.condition || DB.weather.condition;
+  const temperature = weather?.temp != null ? weather.temp : DB.weather.temp;
+  const rainText = weather?.rain || DB.weather.rain;
 
   return (
     <div style={{ minHeight: "100vh", background: "#F1F4ED", fontFamily: "'DM Sans', sans-serif" }}>
@@ -257,9 +298,9 @@ function Shell({ user, onLogout, children, activeTab, setActiveTab }) {
           </div>
           <div style={{ marginTop: 24, padding: "14px", background: "#F1F8E9", borderRadius: 10, border: "1px solid #C8E6C9" }}>
             <div style={{ fontSize: 11, color: "#558B2F", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Weather</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "#2E7D32" }}>{DB.weather.temp}°C</div>
-            <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>{DB.weather.condition}</div>
-            <div style={{ fontSize: 11, color: "#8BC34A", marginTop: 6, fontStyle: "italic" }}>Rain in {DB.weather.rain}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#2E7D32" }}>{temperature}°C</div>
+            <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>{weatherText}</div>
+            <div style={{ fontSize: 11, color: "#8BC34A", marginTop: 6, fontStyle: "italic" }}>Rain in {rainText}</div>
           </div>
         </div>
 
@@ -721,6 +762,49 @@ function CropsPage() {
 /* ===========================
    Community Page
    =========================== */
+function WeatherPage({ weather, status }) {
+  return (
+    <div>
+      <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 6 }}>Weather Overview 🌤</h2>
+      <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>Live weather at your current location using Open-Meteo.</p>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#1B4332' }}>{weather?.temp ?? 'N/A'}°C</div>
+            <div style={{ fontSize: 14, color: '#555', marginTop: 4 }}>{weather?.condition || 'Weather unavailable'}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 12, color: '#888' }}>Source</div>
+            <div style={{ fontWeight: 700, color: '#2E7D32' }}>{weather?.source || 'Fallback data'}</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
+        <div className="card">
+          <div style={{ fontSize: 13, color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>Wind</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1B4332' }}>{weather?.wind || 'N/A'}</div>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>{weather?.windDirection || ''}</div>
+        </div>
+        <div className="card">
+          <div style={{ fontSize: 13, color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>Humidity</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1B4332' }}>{weather?.humidity != null ? `${weather.humidity}%` : 'N/A'}</div>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>{weather?.precipitationProbability != null ? `Rain chance ${weather.precipitationProbability}%` : ''}</div>
+        </div>
+        <div className="card">
+          <div style={{ fontSize: 13, color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>Advisory</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#1B4332' }}>{weather?.advisory || 'No advisory available'}</div>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>{status.error || 'Using current location weather data.'}</div>
+        </div>
+      </div>
+      {status.error && (
+        <div style={{ marginTop: 20, padding: '14px 16px', borderRadius: 12, background: '#FFF3E0', color: '#795548', fontSize: 13 }}>
+          {status.error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CommunityPage({ user }) {
   const [newPost, setNewPost] = useState("");
   const [posts, setPosts] = useState(() => DB.posts || []);
@@ -1208,6 +1292,8 @@ function RouteMapPage() {
 export default function App() {
   const [user, setUser] = useState(loadCurrentUser);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [weather, setWeather] = useState(() => loadSavedWeather() || DB.weather);
+  const [weatherStatus, setWeatherStatus] = useState({ loading: false, error: null });
 
   useEffect(() => {
     if (user) {
@@ -1226,6 +1312,30 @@ export default function App() {
     setUser(null);
   };
 
+  useEffect(() => {
+    if (!user || typeof navigator === "undefined" || !navigator.geolocation) return;
+
+    const handleGeoSuccess = async (position) => {
+      const { latitude, longitude } = position.coords;
+      setWeatherStatus({ loading: true, error: null });
+      const newWeather = await fetchWeatherByCoords(latitude, longitude);
+      if (newWeather) {
+        setWeather(newWeather);
+        saveWeather(newWeather);
+      } else {
+        setWeatherStatus({ loading: false, error: "Unable to load real weather data." });
+      }
+      setWeatherStatus(prev => ({ ...prev, loading: false }));
+    };
+
+    const handleGeoError = (err) => {
+      console.warn("Geolocation error:", err.message);
+      setWeatherStatus({ loading: false, error: "Location denied or unavailable. Using fallback weather." });
+    };
+
+    navigator.geolocation.getCurrentPosition(handleGeoSuccess, handleGeoError, { timeout: 15000 });
+  }, [user]);
+
   if (!user) return <AuthScreen onLogin={handleLogin} />;
 
   const renderContent = () => {
@@ -1233,7 +1343,7 @@ export default function App() {
       if (activeTab === "dashboard") return <CustomerDashboard user={user} />;
       if (activeTab === "market") return <CustomerMarket user={user} />;
       if (activeTab === "crops") return <CropsPage />;
-      if (activeTab === "weather") return <div className="card"><h3>Weather</h3><p>{DB.weather.condition}, {DB.weather.temp}°C</p></div>;
+      if (activeTab === "weather") return <WeatherPage weather={weather} status={weatherStatus} />;
       if (activeTab === "community") return <CommunityPage user={user} />;
     }
     if (user.role === "supplier") {
@@ -1254,7 +1364,7 @@ export default function App() {
   };
 
   return (
-    <Shell user={user} onLogout={handleLogout} activeTab={activeTab} setActiveTab={setActiveTab}>
+    <Shell user={user} onLogout={handleLogout} activeTab={activeTab} setActiveTab={setActiveTab} weather={weather}>
       {renderContent()}
     </Shell>
   );
