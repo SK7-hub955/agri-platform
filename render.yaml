@@ -1,8 +1,34 @@
 services:
+  # Backend API Server
+  - type: web
+    name: agri-platform-api
+    env: node
+    plan: free
+    region: oregon
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: GMAIL_USER
+        scope: build
+      - key: GMAIL_PASS
+        scope: build
+      - key: PORT
+        value: "3001"
+      - key: FRONTEND_URL
+        value: https://agri-platform.onrender.com
+      - key: NODE_ENV
+        value: production
+
+  # Frontend Static Site
   - type: static_site
     name: agri-platform
     env: static
     plan: free
-    root: agri-platform
+    rootDir: agri-platform
     buildCommand: npm install && npm run build
-    publishPath: dist
+    publishDirectory: dist
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://agri-platform-api.onrender.com
+
