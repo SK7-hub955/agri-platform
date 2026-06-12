@@ -2,25 +2,26 @@ import React, { useState, useEffect } from "react";
 
 const STORAGE_KEY = "agriPlatformDB";
 const SESSION_KEY = "agriPlatformCurrentUser";
+const AUTH_HERO_IMAGE = "https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=1400&q=80";
 
 function createDefaultDB() {
   return {
     users: [],
     products: [
-      { id: 1, name: "Hybrid Maize Seed (SC403)", supplierId: null, category: "Seeds", price: 285, unit: "25kg bag", stock: 120, season: "Nov–Jan", predictedAvail: "Oct 2026", predictedPrice: 310, demand: "High", img: "🌽" },
-      { id: 2, name: "Soybean Seed (Hernon 147)", supplierId: null, category: "Seeds", price: 320, unit: "25kg bag", stock: 80, season: "Nov–Dec", predictedAvail: "Oct 2026", predictedPrice: 340, demand: "Medium", img: "🫘" },
-      { id: 3, name: "D-Compound Fertilizer", supplierId: null, category: "Fertilizer", price: 450, unit: "50kg bag", stock: 200, season: "All year", predictedAvail: "Now", predictedPrice: 470, demand: "High", img: "🧪" },
-      { id: 4, name: "Urea (Nitrogen Top Dressing)", supplierId: null, category: "Fertilizer", price: 380, unit: "50kg bag", stock: 150, season: "All year", predictedAvail: "Now", predictedPrice: 395, demand: "Medium", img: "⚗️" },
-      { id: 5, name: "Groundnut Seed (Chalimbana)", supplierId: null, category: "Seeds", price: 220, unit: "20kg bag", stock: 60, season: "Nov–Dec", predictedAvail: "Sep 2026", predictedPrice: 250, demand: "Low", img: "🥜" },
-      { id: 6, name: "Tomato Seedlings (Money Maker)", supplierId: null, category: "Seedlings", price: 150, unit: "tray of 50", stock: 40, season: "Apr–Jun", predictedAvail: "Mar 2027", predictedPrice: 165, demand: "High", img: "🍅" },
+      { id: 1, name: "Hybrid Maize Seed (SC403)", supplierId: null, category: "Seeds", price: 285, unit: "25kg bag", stock: 120, season: "Nov–Jan", predictedAvail: "Oct 2026", predictedPrice: 310, demand: "High", img: "🌽", image: "https://images.unsplash.com/photo-1511479744931-3a5d3d5a0ce4?auto=format&fit=crop&w=800&q=80" },
+      { id: 2, name: "Soybean Seed (Hernon 147)", supplierId: null, category: "Seeds", price: 320, unit: "25kg bag", stock: 80, season: "Nov–Dec", predictedAvail: "Oct 2026", predictedPrice: 340, demand: "Medium", img: "🫘", image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80" },
+      { id: 3, name: "D-Compound Fertilizer", supplierId: null, category: "Fertilizer", price: 450, unit: "50kg bag", stock: 200, season: "All year", predictedAvail: "Now", predictedPrice: 470, demand: "High", img: "🧪", image: "https://images.unsplash.com/photo-1524594164608-9b1f890cd1bf?auto=format&fit=crop&w=800&q=80" },
+      { id: 4, name: "Urea (Nitrogen Top Dressing)", supplierId: null, category: "Fertilizer", price: 380, unit: "50kg bag", stock: 150, season: "All year", predictedAvail: "Now", predictedPrice: 395, demand: "Medium", img: "⚗️", image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80" },
+      { id: 5, name: "Groundnut Seed (Chalimbana)", supplierId: null, category: "Seeds", price: 220, unit: "20kg bag", stock: 60, season: "Nov–Dec", predictedAvail: "Sep 2026", predictedPrice: 250, demand: "Low", img: "🥜", image: "https://images.unsplash.com/photo-1524594164608-9b1f890cd1bf?auto=format&fit=crop&w=800&q=80" },
+      { id: 6, name: "Tomato Seedlings (Money Maker)", supplierId: null, category: "Seedlings", price: 150, unit: "tray of 50", stock: 40, season: "Apr–Jun", predictedAvail: "Mar 2027", predictedPrice: 165, demand: "High", img: "🍅", image: "https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=800&q=80" },
     ],
     orders: [],
     deliveries: [],
     cropData: [
-      { name: "Maize", soil: "Loamy, well-drained", season: "Nov–Jan", spacing: "75cm × 25cm", fertilizer: "D-Compound + Urea", disease: "Streak Virus, Stalk Borer", yield: "4–8 t/ha", harvest: "Apr–May", img: "🌽" },
-      { name: "Soybeans", soil: "Sandy loam, pH 6–6.5", season: "Nov–Dec", spacing: "45cm × 5cm", fertilizer: "Rhizobium inoculant", disease: "Rust, Mosaic Virus", yield: "1.5–3 t/ha", harvest: "Mar–Apr", img: "🫘" },
-      { name: "Groundnuts", soil: "Sandy loam, well-drained", season: "Nov–Dec", spacing: "45cm × 15cm", fertilizer: "Low N, P-rich", disease: "Rosette, Leaf Spot", yield: "0.8–1.5 t/ha", harvest: "Mar–Apr", img: "🥜" },
-      { name: "Tomatoes", soil: "Rich loam, pH 6–6.8", season: "Apr–Jun (dry)", spacing: "60cm × 45cm", fertilizer: "High K + Ca", disease: "Blight, Bacterial Wilt", yield: "20–40 t/ha", harvest: "Jul–Sep", img: "🍅" },
+      { name: "Maize", soil: "Loamy, well-drained", season: "Nov–Jan", spacing: "75cm × 25cm", fertilizer: "D-Compound + Urea", disease: "Streak Virus, Stalk Borer", yield: "4–8 t/ha", harvest: "Apr–May", img: "🌽", image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80" },
+      { name: "Soybeans", soil: "Sandy loam, pH 6–6.5", season: "Nov–Dec", spacing: "45cm × 5cm", fertilizer: "Rhizobium inoculant", disease: "Rust, Mosaic Virus", yield: "1.5–3 t/ha", harvest: "Mar–Apr", img: "🫘", image: "https://images.unsplash.com/photo-1510639403341-7d16d53f7f04?auto=format&fit=crop&w=800&q=80" },
+      { name: "Groundnuts", soil: "Sandy loam, well-drained", season: "Nov–Dec", spacing: "45cm × 15cm", fertilizer: "Low N, P-rich", disease: "Rosette, Leaf Spot", yield: "0.8–1.5 t/ha", harvest: "Mar–Apr", img: "🥜", image: "https://images.unsplash.com/photo-1490276481064-6e8c91b40aaf?auto=format&fit=crop&w=800&q=80" },
+      { name: "Tomatoes", soil: "Rich loam, pH 6–6.8", season: "Apr–Jun (dry)", spacing: "60cm × 45cm", fertilizer: "High K + Ca", disease: "Blight, Bacterial Wilt", yield: "20–40 t/ha", harvest: "Jul–Sep", img: "🍅", image: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=800&q=80" },
     ],
     weather: { temp: 22, humidity: 58, rain: "3 days", condition: "Partly Cloudy", wind: "14 km/h", advisory: "Rain expected in 3 days — delay fertilizer application until after rains." },
     marketPrices: [
@@ -390,30 +391,41 @@ function AuthScreen({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #1a3a1a 0%, #2d5a27 40%, #4a7c3f 70%, #8B6914 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Crimson Pro', Georgia, serif", padding: "20px" }}>
+    <div style={{ minHeight: "100vh", background: `linear-gradient(180deg, rgba(18,45,19,0.9), rgba(14,32,15,0.94)), url('${AUTH_HERO_IMAGE}') center/cover no-repeat`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", padding: "20px" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; margin: 0; }
-        .auth-input { width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border 0.2s; }
-        .auth-input:focus { border-color: #7CB342; }
-        .auth-input::placeholder { color: rgba(255,255,255,0.4); }
-        .auth-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #4CAF50, #2E7D32); border: none; border-radius: 8px; color: #fff; font-size: 16px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; letter-spacing: 0.5px; }
-        .auth-btn:hover { opacity: 0.92; transform: translateY(-1px); }
-        .role-card { flex: 1; padding: 14px 10px; border: 2px solid rgba(255,255,255,0.15); border-radius: 10px; cursor: pointer; text-align: center; transition: all 0.2s; background: rgba(0,0,0,0.2); }
-        .role-card.active { border-color: #7CB342; background: rgba(124,179,66,0.15); }
-        .role-card:hover { border-color: rgba(124,179,66,0.6); }
+        body, html, #root { min-height: 100%; }
+        .auth-input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; color: #fff; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border 0.2s, transform 0.2s; }
+        .auth-input:focus { border-color: #A5D6A7; transform: translateY(-1px); }
+        .auth-input::placeholder { color: rgba(255,255,255,0.72); }
+        .auth-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #7CB342, #2E7D32); border: none; border-radius: 14px; color: #fff; font-size: 16px; font-family: 'DM Sans', sans-serif; font-weight: 700; cursor: pointer; transition: transform 0.2s, opacity 0.2s; letter-spacing: 0.5px; box-shadow: 0 18px 40px rgba(0,0,0,0.16); }
+        .auth-btn:hover { opacity: 0.94; transform: translateY(-2px); }
+        .role-card { flex: 1; padding: 16px 12px; border: 1.5px solid rgba(255,255,255,0.16); border-radius: 16px; cursor: pointer; text-align: center; transition: all 0.25s; background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); min-width: 110px; }
+        .role-card.active { border-color: rgba(193,255,193,0.9); background: rgba(255,255,255,0.14); box-shadow: 0 18px 40px rgba(46,125,50,0.16); }
+        .role-card:hover { transform: translateY(-2px); border-color: rgba(193,255,193,0.7); }
+        .auth-panel { background: rgba(255,255,255,0.08); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.18); border-radius: 28px; box-shadow: 0 28px 90px rgba(0,0,0,0.24); }
+        .auth-hero { height: 170px; border-radius: 22px; background: linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.45)), url('${AUTH_HERO_IMAGE}') center/cover no-repeat; display: flex; flex-direction: column; justify-content: flex-end; padding: 22px; margin-bottom: 24px; }
+        .auth-hero small { color: #DCE775; letter-spacing: 1px; text-transform: uppercase; font-size: 11px; margin-bottom: 8px; display: block; }
+        .auth-hero h1 { color: #fff; font-size: 28px; line-height: 1.05; margin: 0; }
+        .auth-note { color: rgba(255,255,255,0.78); font-size: 12px; line-height: 1.5; }
       `}</style>
-      <div style={{ width: "100%", maxWidth: 460 }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>🌱</div>
-          <h1 style={{ color: "#fff", fontSize: 36, fontWeight: 700, letterSpacing: "-0.5px", fontFamily: "'Crimson Pro', serif" }}>AgriConnect</h1>
-          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>Zambia's Agricultural Marketplace</p>
-        </div>
-
-        <div style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(20px)", borderRadius: 16, padding: 32, border: "1px solid rgba(255,255,255,0.1)" }}>
-          <div style={{ display: "flex", background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: 4, marginBottom: 28 }}>
+      <div style={{ width: "100%", maxWidth: 520 }}>
+        <div className="auth-panel" style={{ padding: 32 }}>
+          <div className="auth-hero">
+            <small>Built for modern African agriculture</small>
+            <h1>Grow better. Buy smarter. Trade with confidence.</h1>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, gap: 12 }}>
+            <div>
+              <div style={{ color: "#fff", fontSize: 32, fontWeight: 700, letterSpacing: "-0.6px", fontFamily: "'Crimson Pro', serif" }}>AgriConnect</div>
+              <p className="auth-note" style={{ marginTop: 8 }}>Secure marketplace, verified Gmail sign-up, and one account for all farm roles.</p>
+            </div>
+            <div style={{ width: 60, height: 60, borderRadius: 18, background: "rgba(255,255,255,0.16)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 28 }}>🌾</div>
+          </div>
+          <div style={{ display: "flex", gap: 10, background: "rgba(255,255,255,0.08)", borderRadius: 18, padding: 6, marginBottom: 28 }}>
             {["login","register"].map(t => (
-              <button key={t} onClick={() => { setTab(t); setError(""); }} style={{ flex: 1, padding: "10px", border: "none", borderRadius: 6, background: tab === t ? "rgba(124,179,66,0.8)" : "transparent", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer", fontSize: 14, transition: "background 0.2s" }}>
+              <button key={t} onClick={() => { setTab(t); setError(""); setMessage(""); }} style={{ flex: 1, minWidth: 120, padding: "12px 0", border: "none", borderRadius: 16, background: tab === t ? "rgba(193,255,193,0.18)" : "transparent", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, cursor: "pointer", fontSize: 14, transition: "background 0.2s, transform 0.2s", boxShadow: tab === t ? "0 12px 24px rgba(40,80,0,0.16)" : "none" }}>
                 {t === "login" ? "Sign In" : "Register"}
               </button>
             ))}
@@ -537,24 +549,27 @@ function CustomerMarket({ user }) {
           {filtered.map(p => {
             const supplier = DB.users.find(u => u.id === p.supplierId);
             return (
-              <div key={p.id} className="card" style={{ position: "relative", overflow: "hidden" }}>
-                <div style={{ fontSize: 42, marginBottom: 10, textAlign: "center", background: "#F9FBF7", borderRadius: 10, padding: "16px", marginBottom: 14 }}>{p.img}</div>
-                <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>{p.category}</div>
-                <div style={{ fontWeight: 700, fontSize: 16, color: "#1B4332", marginBottom: 4 }}>{p.name}</div>
-                <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>by {supplier?.name}</div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 20, color: "#2E7D32" }}>{formatK(p.price)}</div>
-                  <div style={{ fontSize: 12, color: "#888" }}>per {p.unit}</div>
+              <div key={p.id} className="card" style={{ position: "relative", overflow: "hidden", minHeight: 360, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div style={{ borderRadius: 22, overflow: "hidden", minHeight: 190, marginBottom: 18, position: "relative", background: `url(${p.image}) center/cover no-repeat` }}>
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.48))" }} />
+                  <div style={{ position: "absolute", left: 16, top: 16, padding: "6px 12px", borderRadius: 999, background: "rgba(255,255,255,0.92)", color: "#2E7D32", fontSize: 11, fontWeight: 700, letterSpacing: "0.5px" }}>{p.category}</div>
+                  <div style={{ position: "absolute", left: 16, bottom: 16, right: 16, color: "#fff", fontSize: 18, fontWeight: 700, textShadow: "0 3px 14px rgba(0,0,0,0.48)" }}>{p.name}</div>
                 </div>
-                <div style={{ background: "#FFF8E1", borderRadius: 6, padding: "8px 10px", marginBottom: 12, fontSize: 12 }}>
-                  <span style={{ color: "#E65100", fontWeight: 600 }}>AI Prediction:</span> <span style={{ color: "#5D4037" }}>Est. price {formatK(p.predictedPrice)} by {p.predictedAvail}. Demand: </span>
-                  <span style={{ color: p.demand === "High" ? "#C62828" : p.demand === "Medium" ? "#E65100" : "#2E7D32", fontWeight: 600 }}>{p.demand}</span>
+                <div>
+                  <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>by {supplier?.name || 'Local supplier'}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 20, color: "#2E7D32" }}>{formatK(p.price)}</div>
+                    <div style={{ fontSize: 12, color: "#888" }}>per {p.unit}</div>
+                  </div>
+                  <div style={{ background: "#F1F8E9", borderRadius: 12, padding: "12px 14px", marginBottom: 14, fontSize: 12, color: "#4F6228" }}>
+                    <span style={{ fontWeight: 700, color: "#2E7D32" }}>Forecast:</span> Estimated {formatK(p.predictedPrice)} by {p.predictedAvail}. Demand: <span style={{ color: p.demand === "High" ? "#C62828" : p.demand === "Medium" ? "#E65100" : "#2E7D32", fontWeight: 700 }}>{p.demand}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                    <span className="badge" style={{ background: "#E8F5E9", color: "#2E7D32" }}>Stock: {p.stock}</span>
+                    <span className="badge" style={{ background: "#E3F2FD", color: "#1565C0" }}>Season: {p.season}</span>
+                  </div>
+                  <button className="btn-primary" style={{ width: "100%" }} onClick={() => addToCart(p)}>Add to Cart</button>
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <span className="badge" style={{ background: "#E8F5E9", color: "#2E7D32" }}>Stock: {p.stock}</span>
-                  <span className="badge" style={{ background: "#E3F2FD", color: "#1565C0" }}>Season: {p.season}</span>
-                </div>
-                <button className="btn-primary" style={{ width: "100%", marginTop: 12 }} onClick={() => addToCart(p)}>Add to Cart</button>
               </div>
             );
           })}
