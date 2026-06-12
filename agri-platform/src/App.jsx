@@ -1063,14 +1063,18 @@ function MarketPricesPage() {
       {priceError && <div style={{ marginBottom: 16, color: "#C62828", fontSize: 13, padding: "12px 14px", background: "#FFEBEE", borderRadius: 12 }}><strong>Notice:</strong> {priceError}</div>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 16, marginBottom: 24 }}>
         {livePrices.map((m, i) => (
-          <div key={i} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div key={i} className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 150 }}>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: "#1B4332" }}>{m.crop}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#1B4332" }}>{m.crop}</div>
               <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{m.symbol || 'Verified commodity price'}</div>
+              {m.unit && <div style={{ fontSize: 11, color: "#666", marginTop: 6 }}>Unit: {m.unit}</div>}
             </div>
-            <div style={{ textAlign: "right" }}>
+            <div style={{ marginTop: 14, textAlign: "right" }}>
               <div style={{ fontSize: 22, fontWeight: 700, color: "#2E7D32" }}>{m.price}</div>
-              <div style={{ fontSize: 13, color: m.trend === "up" ? "#2E7D32" : m.trend === "down" ? "#C62828" : "#888", fontWeight: 600 }}>{m.trend === "up" ? "↑" : m.trend === "down" ? "↓" : "→"} {m.change}</div>
+              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 6 }}>
+                <span style={{ fontSize: 13, color: m.trend === "up" ? "#2E7D32" : m.trend === "down" ? "#C62828" : "#888", fontWeight: 600 }}>{m.trend === "up" ? "↑" : m.trend === "down" ? "↓" : "→"} {m.change}</span>
+                {m.source && <span style={{ fontSize: 11, color: "#555", background: "#F1F8E9", padding: "3px 8px", borderRadius: 10 }}>{m.source}</span>}
+              </div>
             </div>
           </div>
         ))}

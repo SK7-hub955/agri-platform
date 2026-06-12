@@ -35,23 +35,19 @@ transporter.verify((error, success) => {
 });
 
 const DEFAULT_MARKET_PRICES = [
-  { crop: "Maize", price: "K850/50kg", change: "+3.2%", trend: "up" },
-  { crop: "Soybeans", price: "K1,200/50kg", change: "+1.8%", trend: "up" },
-  { crop: "Groundnuts", price: "K1,800/50kg", change: "-0.5%", trend: "down" },
-  { crop: "Wheat", price: "K920/50kg", change: "+2.1%", trend: "up" },
-  { crop: "Cassava", price: "K420/50kg", change: "0.0%", trend: "flat" },
+  { crop: "Maize", symbol: "ZC", unit: "bushel", price: "K850/50kg", change: "+3.2%", trend: "up" },
+  { crop: "Soybeans", symbol: "ZS", unit: "bushel", price: "K1,200/50kg", change: "+1.8%", trend: "up" },
+  { crop: "Groundnuts", symbol: "GN", unit: "kg", price: "K1,800/50kg", change: "-0.5%", trend: "down" },
+  { crop: "Wheat", symbol: "ZW", unit: "bushel", price: "K920/50kg", change: "+2.1%", trend: "up" },
+  { crop: "Cassava", symbol: "CC", unit: "kg", price: "K420/50kg", change: "0.0%", trend: "flat" },
 ];
 
-const MARKET_PRICE_PROVIDER = process.env.MARKET_PRICE_PROVIDER || 'commoditiesapi';
-const MARKET_PRICE_KEY = process.env.MARKET_PRICE_KEY || '';
-const MARKET_PRICE_SYMBOLS = process.env.MARKET_PRICE_SYMBOLS || 'ZC,ZS,ZW,SB,KC';
-const COMMODITY_LABELS = {
-  ZC: 'Corn',
-  ZS: 'Soybeans',
-  ZW: 'Wheat',
-  SB: 'Sugar',
-  KC: 'Coffee',
-};
+const MARKET_PRICE_PROVIDER = process.env.MARKET_PRICE_PROVIDER || 'silv';
+const MARKET_PRICE_CATEGORIES_RAW = process.env.MARKET_PRICE_CATEGORIES || 'dairy,livestock';
+const MARKET_PRICE_CATEGORIES = MARKET_PRICE_CATEGORIES_RAW === 'all'
+  ? []
+  : MARKET_PRICE_CATEGORIES_RAW.split(',').map(s => s.trim()).filter(Boolean);
+const SILV_COMMODITY_ENDPOINT = 'https://data.silv.app/commodities.json';
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -61,59 +57,43 @@ app.get('/api/health', (req, res) => {
 // Market prices from a verified source or fallback
 app.get('/api/market-prices', async (req, res) => {
   try {
-    if (MARKET_PRICE_PROVIDER === 'commoditiesapi') {
-      if (!MARKET_PRICE_KEY) {
-        throw new Error('Commodity API key not configured');
-      }
-
-      const response = await fetch(`https://commodities-api.com/api/latest?access_key=${encodeURIComponent(MARKET_PRICE_KEY)}&symbols=${encodeURIComponent(MARKET_PRICE_SYMBOLS)}&base=USD`);
+    if (MARKET_PRICE_PROVIDER === 'silv') {
+      const response = await fetch(SILV_COMMODITY_ENDPOINT);
       if (!response.ok) {
-        throw new Error(`Commodities API responded with status ${response.status}`);
+        throw new Error(`Silv API responded with status ${response.status}`);
       }
 
       const payload = await response.json();
-      if (!payload || !payload.data || !payload.data.rates) {
-        throw new Error('Unexpected Commodities API response format');
+      const commodities = payload?.commodities;
+      if (!commodities || typeof commodities !== 'object') {
+        throw new Error('Unexpected Silv API response format');
       }
 
-      const rates = payload.data.rates;
-      const prices = MARKET_PRICE_SYMBOLS.split(',').map(symbol => {
-        const trimmed = symbol.trim();
-        const value = rates[trimmed];
+      const symbols = Object.keys(commodities);
+      const filtered = symbols
+        .map(key => ({ key, ...commodities[key] }))
+        .filter(item => MARKET_PRICE_CATEGORIES.length === 0 || MARKET_PRICE_CATEGORIES.includes(item.category));
+
+      const prices = filtered.map(item => {
+        const percent = item?.change_24h?.percent;
+        const formattedPercent = typeof percent === 'number' ? `${(percent * 100).toFixed(2)}%` : 'N/A';
         return {
-          crop: COMMODITY_LABELS[trimmed] || trimmed,
-          symbol: trimmed,
-          price: value != null ? `USD ${Number(value).toFixed(2)}` : 'N/A',
-          change: 'N/A',
-          trend: 'flat',
+          crop: item.display_name || item.key,
+          symbol: item.symbol || item.key,
+          price: item.price != null ? `${item.currency || 'USD'} ${Number(item.price).toFixed(2)}` : 'N/A',
+          change: formattedPercent,
+          trend: typeof percent === 'number' ? (percent > 0 ? 'up' : percent < 0 ? 'down' : 'flat') : 'flat',
+          unit: item.unit || 'unit',
+          source: item.source || 'silv-data',
+          updatedAt: item.last_updated || item.timestamp,
         };
       });
 
-      return res.json({ success: true, source: 'Commodities API', prices });
-    }
+      if (prices.length === 0) {
+        throw new Error(`No Silv commodities found for categories: ${MARKET_PRICE_CATEGORIES.join(', ')}`);
+      }
 
-    if (MARKET_PRICE_PROVIDER === 'yahoo') {
-      const response = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(MARKET_PRICE_SYMBOLS)}`);
-      if (!response.ok) {
-        throw new Error(`Yahoo Finance responded with status ${response.status}`);
-      }
-      const payload = await response.json();
-      const results = payload?.quoteResponse?.result;
-      if (!Array.isArray(results)) {
-        throw new Error('Unexpected Yahoo Finance response format');
-      }
-      const prices = results.map(item => {
-        const value = item.regularMarketPrice;
-        const pct = item.regularMarketChangePercent;
-        return {
-          crop: item.shortName || item.symbol,
-          symbol: item.symbol,
-          price: value != null ? `USD ${Number(value).toFixed(2)}` : 'N/A',
-          change: pct != null ? `${Number(pct).toFixed(2)}%` : '0.00%',
-          trend: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat',
-        };
-      });
-      return res.json({ success: true, source: 'Yahoo Finance', prices });
+      return res.json({ success: true, source: 'Silv Data', prices });
     }
 
     return res.json({ success: true, source: 'fallback', prices: DEFAULT_MARKET_PRICES });
