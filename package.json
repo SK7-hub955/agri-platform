@@ -1,0 +1,9 @@
+{
+  "name": "agri-platform-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "cd agri-platform && npm run dev",
+    "build": "cd agri-platform && npm run build",
+    "preview": "cd agri-platform && npm run preview"
+  }
+}
