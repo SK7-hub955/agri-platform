@@ -183,6 +183,21 @@ function saveCurrentUser(user) {
   }
 }
 
+async function fetchMarketPrices() {
+  try {
+    const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+    const response = await fetch(`${apiUrl}/api/market-prices`);
+    const data = await response.json();
+    if (!data || !Array.isArray(data.prices)) {
+      throw new Error(data?.error || 'Invalid market price response');
+    }
+    return data;
+  } catch (error) {
+    console.error('❌ Failed to fetch live market prices:', error.message);
+    return { success: false, prices: [], error: error.message };
+  }
+}
+
 const formatK = (n) => `K${Number(n).toLocaleString()}`;
 
 /* ===========================
@@ -1009,16 +1024,49 @@ function TransportDeliveries({ user }) {
    Market Prices, Earnings, Route Map
    =========================== */
 function MarketPricesPage() {
+  const [livePrices, setLivePrices] = useState(DB.marketPrices);
+  const [provider, setProvider] = useState('local fallback');
+  const [priceError, setPriceError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadPrices = async () => {
+      setIsLoading(true);
+      const data = await fetchMarketPrices();
+      if (!mounted) return;
+      if (data.success && data.prices.length > 0) {
+        setLivePrices(data.prices);
+        setProvider(data.source || 'verified provider');
+        setPriceError(null);
+      } else {
+        setLivePrices(DB.marketPrices);
+        setProvider('fallback');
+        setPriceError(data.error || 'Using cached fallback prices');
+      }
+      setIsLoading(false);
+    };
+    loadPrices();
+    return () => { mounted = false; };
+  }, []);
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 6 }}>Live Market Prices 📈</h2>
-      <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>Current commodity prices across Zambian markets.</p>
+      <p style={{ color: "#888", fontSize: 14, marginBottom: 8 }}>Current commodity prices across verified sources.</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+        <div style={{ fontSize: 12, color: "#555", padding: "8px 12px", background: "#F1F8E9", borderRadius: 10, border: "1px solid #C8E6C9" }}>
+          Source: {provider}
+        </div>
+        {isLoading && <div style={{ fontSize: 12, color: "#666" }}>Refreshing prices…</div>}
+      </div>
+      {priceError && <div style={{ marginBottom: 16, color: "#C62828", fontSize: 13, padding: "12px 14px", background: "#FFEBEE", borderRadius: 12 }}><strong>Notice:</strong> {priceError}</div>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 16, marginBottom: 24 }}>
-        {DB.marketPrices.map((m, i) => (
+        {livePrices.map((m, i) => (
           <div key={i} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 16, fontWeight: 600, color: "#1B4332" }}>{m.crop}</div>
-              <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>Zambian national average</div>
+              <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{m.symbol || 'Verified commodity price'}</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 22, fontWeight: 700, color: "#2E7D32" }}>{m.price}</div>
