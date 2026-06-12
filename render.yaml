@@ -1,0 +1,8 @@
+services:
+  - type: static_site
+    name: agri-platform
+    env: static
+    plan: free
+    root: agri-platform
+    buildCommand: npm install && npm run build
+    publishPath: dist
