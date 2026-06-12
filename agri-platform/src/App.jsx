@@ -47,15 +47,34 @@ function saveDatabase(db) {
   }
 }
 
+function normalizeUser(user) {
+  const roles = Array.isArray(user.roles)
+    ? user.roles
+    : user.role
+    ? [user.role]
+    : ["customer"];
+
+  return {
+    ...user,
+    roles,
+    role: user.role || roles[0],
+    verified: user.verified !== undefined ? user.verified : true,
+  };
+}
+
 function loadDatabase() {
   if (typeof window === "undefined") return createDefaultDB();
   try {
     const payload = localStorage.getItem(STORAGE_KEY);
     if (payload) {
       const parsed = JSON.parse(payload);
+      const normalizedUsers = Array.isArray(parsed.users)
+        ? parsed.users.map(normalizeUser)
+        : [];
       return {
         ...createDefaultDB(),
         ...parsed,
+        users: normalizedUsers,
         actions: parsed.actions || [],
         posts: parsed.posts || createDefaultDB().posts,
       };
@@ -102,6 +121,40 @@ DB.recordAction = (userId, type, details) => {
   DB.save();
   return action;
 };
+
+function isGmail(email) {
+  return typeof email === "string" && email.toLowerCase().endsWith("@gmail.com");
+}
+
+function generateVerificationCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendVerificationCodeToGmail(email, code, name = "User") {
+  if (!isGmail(email)) return { success: false, error: "Only Gmail addresses are supported" };
+
+  try {
+    const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+    const response = await fetch(`${apiUrl}/api/send-verification`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, name }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("❌ Email service error:", data.error || "Unknown error");
+      return { success: false, error: data.error || "Failed to send verification code" };
+    }
+
+    console.log("✅ Verification code sent to", email);
+    return { success: true, message: data.message };
+  } catch (error) {
+    console.error("❌ Network error sending verification code:", error.message);
+    return { success: false, error: error.message };
+  }
+}
 
 function loadCurrentUser() {
   if (typeof window === "undefined") return null;
@@ -208,10 +261,15 @@ function Shell({ user, onLogout, children, activeTab, setActiveTab }) {
 function AuthScreen({ onLogin }) {
   const [tab, setTab] = useState("login");
   const [role, setRole] = useState("customer");
+  const [selectedRoles, setSelectedRoles] = useState(["customer"]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [stage, setStage] = useState("auth");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   const roleConfig = {
     customer: { label: "Customer", icon: "🛒", desc: "Buy seeds, fertilizer & produce", color: "#4CAF50" },
@@ -219,22 +277,94 @@ function AuthScreen({ onLogin }) {
     transport: { label: "Transporter", icon: "🚚", desc: "Deliver orders to customers", color: "#1976D2" },
   };
 
+  const resetAuthState = () => {
+    setError("");
+    setMessage("");
+    setVerificationCode("");
+  };
+
   const handleLogin = () => {
-    const user = DB.users.find(u => u.email === email && u.password === password && u.role === role);
-    if (user) {
-      DB.recordAction(user.id, "login", { email: user.email, role: user.role });
-      onLogin(user);
-    } else {
-      setError("Invalid credentials or wrong role selected.");
+    resetAuthState();
+    const user = DB.users.find(u => u.email === email);
+    if (!user || user.password !== password) {
+      setError("Invalid credentials. Check email and password.");
+      return;
     }
+    if (!user.roles?.includes(role)) {
+      setError("This account does not have that role. Please choose a different role or register for it.");
+      return;
+    }
+    if (!user.verified) {
+      if (!user.verificationCode) {
+        const code = generateVerificationCode();
+        DB.update("users", u => u.email === user.email, { verificationCode: code, verified: false });
+        sendVerificationCodeToGmail(user.email, code, user.name);
+      }
+      setVerificationEmail(email);
+      setStage("verify");
+      setMessage("This account is not verified. Enter the verification code sent to your Gmail.");
+      return;
+    }
+    DB.recordAction(user.id, "login", { role });
+    onLogin({ ...user, role });
   };
 
   const handleRegister = () => {
+    resetAuthState();
     if (!name || !email || !password) { setError("Please fill all fields."); return; }
-    const newUser = { id: Date.now(), name, email, password, role, avatar: name.slice(0,2).toUpperCase(), location: "Zambia" };
+    if (!isGmail(email)) { setError("Please use a Gmail address to register."); return; }
+    if (selectedRoles.length === 0) { setError("Select at least one role."); return; }
+
+    const existing = DB.users.find(u => u.email === email);
+    if (existing) {
+      setError("An account already exists with that email. Please login.");
+      return;
+    }
+
+    const code = generateVerificationCode();
+    const newUser = {
+      id: Date.now(),
+      name,
+      email,
+      password,
+      roles: selectedRoles,
+      role: selectedRoles[0],
+      verified: false,
+      verificationCode: code,
+      avatar: name.slice(0,2).toUpperCase(),
+      location: "Zambia"
+    };
+
     DB.insert("users", newUser);
-    DB.recordAction(newUser.id, "register", { email: newUser.email, role: newUser.role });
-    onLogin(newUser);
+    DB.recordAction(newUser.id, "register", { email: newUser.email, roles: selectedRoles });
+    sendVerificationCodeToGmail(email, code, name);
+    setVerificationEmail(email);
+    setStage("verify");
+    setMessage("A verification code has been sent to your Gmail. Enter it below to complete registration.");
+  };
+
+  const handleVerify = () => {
+    resetAuthState();
+    const user = DB.users.find(u => u.email === verificationEmail);
+    if (!user) { setError("No account found for this email."); return; }
+    if (user.verificationCode !== verificationCode.trim()) {
+      setError("Verification code is incorrect.");
+      return;
+    }
+    DB.update("users", u => u.email === verificationEmail, { verified: true, verificationCode: null });
+    DB.recordAction(user.id, "verify_email", { email: user.email });
+    onLogin({ ...user, verified: true });
+  };
+
+  const handleResend = () => {
+    resetAuthState();
+    const user = DB.users.find(u => u.email === verificationEmail || u.email === email);
+    if (!user) { setError("No account found to resend code."); return; }
+    const code = generateVerificationCode();
+    DB.update("users", u => u.email === user.email, { verificationCode: code, verified: false });
+    sendVerificationCodeToGmail(user.email, code, user.name);
+    setVerificationEmail(user.email);
+    setMessage("A new verification code has been sent to your Gmail.");
   };
 
   return (
@@ -269,9 +399,15 @@ function AuthScreen({ onLogin }) {
 
           <div style={{ marginBottom: 20 }}>
             <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: "'DM Sans', sans-serif", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>I am a…</p>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {Object.entries(roleConfig).map(([key, cfg]) => (
-                <div key={key} className={`role-card${role === key ? " active" : ""}`} onClick={() => setRole(key)}>
+                <div key={key} className={`role-card${(tab === "register" ? selectedRoles.includes(key) : role === key) ? " active" : ""}`} onClick={() => {
+                  if (tab === "register") {
+                    setSelectedRoles(prev => prev.includes(key) ? prev.filter(r => r !== key) : [...prev, key]);
+                  } else {
+                    setRole(key);
+                  }
+                }}>
                   <div style={{ fontSize: 22, marginBottom: 4 }}>{cfg.icon}</div>
                   <div style={{ color: "#fff", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>{cfg.label}</div>
                 </div>
@@ -285,11 +421,28 @@ function AuthScreen({ onLogin }) {
             <input className="auth-input" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} type="password" />
           </div>
 
+          {message && <p style={{ color: "#B2FF59", fontSize: 13, fontFamily: "'DM Sans', sans-serif", marginTop: 12, textAlign: "center" }}>{message}</p>}
           {error && <p style={{ color: "#FF7043", fontSize: 13, fontFamily: "'DM Sans', sans-serif", marginTop: 12, textAlign: "center" }}>{error}</p>}
 
-          <button className="auth-btn" style={{ marginTop: 20 }} onClick={tab === "login" ? handleLogin : handleRegister}>
-            {tab === "login" ? "Sign In to AgriConnect" : "Create Account"}
-          </button>
+          {stage === "verify" ? (
+            <div style={{ marginTop: 16, padding: "18px", background: "rgba(255,255,255,0.08)", borderRadius: 12 }}>
+              <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}>Enter the verification code sent to {verificationEmail || email}.</p>
+              <input className="auth-input" placeholder="Verification code" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} />
+              <button className="auth-btn" style={{ marginTop: 20 }} onClick={handleVerify}>Verify Account</button>
+              <button className="auth-btn" style={{ marginTop: 10, background: "rgba(255,255,255,0.12)", color: "#fff" }} onClick={handleResend}>Resend Code</button>
+            </div>
+          ) : (
+            <>
+              <button className="auth-btn" style={{ marginTop: 20 }} onClick={tab === "login" ? handleLogin : handleRegister}>
+                {tab === "login" ? "Sign In to AgriConnect" : "Create Account"}
+              </button>
+              {tab === "register" && (
+                <div style={{ marginTop: 16, padding: "12px", background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>
+                  <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", textAlign: "center", margin: 0 }}>Select one or more roles. Verification will be sent to Gmail.</p>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -4,6 +4,9 @@
   "scripts": {
     "dev": "cd agri-platform && npm run dev",
     "build": "cd agri-platform && npm run build",
-    "preview": "cd agri-platform && npm run preview"
+    "preview": "cd agri-platform && npm run preview",
+    "server": "cd server && npm run dev",
+    "server:start": "cd server && npm start",
+    "install-all": "npm install && cd agri-platform && npm install && cd ../server && npm install"
   }
 }
