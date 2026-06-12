@@ -14,7 +14,15 @@ app.use(cors({
   origin: FRONTEND_URL,
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
+  credentials: true,
 }));
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
 // Gmail transporter
 const transporter = nodemailer.createTransport({

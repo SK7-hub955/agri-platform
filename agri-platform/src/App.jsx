@@ -135,7 +135,7 @@ async function sendVerificationCodeToGmail(email, code, name = "User") {
   if (!isGmail(email)) return { success: false, error: "Only Gmail addresses are supported" };
 
   try {
-    const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
     const response = await fetch(`${apiUrl}/api/send-verification`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -207,7 +207,7 @@ function saveWeather(weather) {
 
 async function fetchWeatherByCoords(lat, lon) {
   try {
-    const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
     const response = await fetch(`${apiUrl}/api/weather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
     const data = await response.json();
     if (!data || !data.success || !data.weather) {
@@ -222,7 +222,7 @@ async function fetchWeatherByCoords(lat, lon) {
 
 async function fetchMarketPrices() {
   try {
-    const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
     const response = await fetch(`${apiUrl}/api/market-prices`);
     const data = await response.json();
     if (!data || !Array.isArray(data.prices)) {

@@ -63,7 +63,7 @@ Backend (agri-platform-api):
 - NODE_ENV=production
 
 Frontend (agri-platform):
-- REACT_APP_API_URL (backend URL)
+- VITE_API_URL (backend URL)
 ```
 
 ## Build Verification ✅

@@ -98,7 +98,7 @@ Fill in the following settings:
 Click **Advanced** and add:
 
 ```
-REACT_APP_API_URL = https://agri-platform-api.onrender.com
+VITE_API_URL = https://agri-platform-api.onrender.com
 ```
 
 Replace with your actual backend URL from Step 2.
