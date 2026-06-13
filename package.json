@@ -7,6 +7,7 @@
     "preview": "cd agri-platform && npm run preview",
     "server": "cd server && npm run dev",
     "server:start": "cd server && npm start",
+    "migrate": "cd server && npm run migrate",
     "install-all": "npm install && cd agri-platform && npm install && cd ../server && npm install"
   }
 }

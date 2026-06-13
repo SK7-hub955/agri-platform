@@ -1,3 +1,11 @@
+databases:
+  # Managed PostgreSQL instance
+  - name: agri-platform-db
+    plan: free
+    region: oregon
+    databaseName: agriconnect
+    user: agri
+
 services:
   # Backend API Server
   - type: web
@@ -7,8 +15,17 @@ services:
     region: oregon
     rootDir: server
     buildCommand: npm install
-    startCommand: npm start
+    # Apply schema + seed before starting (idempotent), then launch the API.
+    startCommand: npm run migrate && npm start
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agri-platform-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
       - key: GMAIL_USER
         sync: false
       - key: GMAIL_PASS
@@ -19,6 +36,10 @@ services:
         value: https://agri-platform.onrender.com
       - key: NODE_ENV
         value: production
+      - key: MARKET_PRICE_PROVIDER
+        value: silv
+      - key: MARKET_PRICE_CATEGORIES
+        value: dairy,livestock
 
   # Frontend Static Site
   - type: static_site
@@ -31,4 +52,3 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://agri-platform-api.onrender.com
-
