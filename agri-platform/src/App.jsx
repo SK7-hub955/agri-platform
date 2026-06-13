@@ -1,197 +1,48 @@
 import React, { useState, useEffect } from "react";
+import { api, getToken, setToken } from "./api";
 
-const STORAGE_KEY = "agriPlatformDB";
-const SESSION_KEY = "agriPlatformCurrentUser";
 const AUTH_HERO_IMAGE = "https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=1400&q=80";
+const SESSION_ROLE_KEY = "agriConnectRole";
+const WEATHER_STORAGE_KEY = "agriPlatformWeather";
 
-function createDefaultDB() {
-  return {
-    users: [],
-    products: [
-      { id: 1, name: "Hybrid Maize Seed (SC403)", supplierId: null, category: "Seeds", price: 285, unit: "25kg bag", stock: 120, season: "Nov–Jan", predictedAvail: "Oct 2026", predictedPrice: 310, demand: "High", img: "🌽", image: "https://images.unsplash.com/photo-1511479744931-3a5d3d5a0ce4?auto=format&fit=crop&w=800&q=80" },
-      { id: 2, name: "Soybean Seed (Hernon 147)", supplierId: null, category: "Seeds", price: 320, unit: "25kg bag", stock: 80, season: "Nov–Dec", predictedAvail: "Oct 2026", predictedPrice: 340, demand: "Medium", img: "🫘", image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80" },
-      { id: 3, name: "D-Compound Fertilizer", supplierId: null, category: "Fertilizer", price: 450, unit: "50kg bag", stock: 200, season: "All year", predictedAvail: "Now", predictedPrice: 470, demand: "High", img: "🧪", image: "https://images.unsplash.com/photo-1524594164608-9b1f890cd1bf?auto=format&fit=crop&w=800&q=80" },
-      { id: 4, name: "Urea (Nitrogen Top Dressing)", supplierId: null, category: "Fertilizer", price: 380, unit: "50kg bag", stock: 150, season: "All year", predictedAvail: "Now", predictedPrice: 395, demand: "Medium", img: "⚗️", image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80" },
-      { id: 5, name: "Groundnut Seed (Chalimbana)", supplierId: null, category: "Seeds", price: 220, unit: "20kg bag", stock: 60, season: "Nov–Dec", predictedAvail: "Sep 2026", predictedPrice: 250, demand: "Low", img: "🥜", image: "https://images.unsplash.com/photo-1524594164608-9b1f890cd1bf?auto=format&fit=crop&w=800&q=80" },
-      { id: 6, name: "Tomato Seedlings (Money Maker)", supplierId: null, category: "Seedlings", price: 150, unit: "tray of 50", stock: 40, season: "Apr–Jun", predictedAvail: "Mar 2027", predictedPrice: 165, demand: "High", img: "🍅", image: "https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=800&q=80" },
-    ],
-    orders: [],
-    deliveries: [],
-    cropData: [
-      { name: "Maize", soil: "Loamy, well-drained", season: "Nov–Jan", spacing: "75cm × 25cm", fertilizer: "D-Compound + Urea", disease: "Streak Virus, Stalk Borer", yield: "4–8 t/ha", harvest: "Apr–May", img: "🌽", image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80" },
-      { name: "Soybeans", soil: "Sandy loam, pH 6–6.5", season: "Nov–Dec", spacing: "45cm × 5cm", fertilizer: "Rhizobium inoculant", disease: "Rust, Mosaic Virus", yield: "1.5–3 t/ha", harvest: "Mar–Apr", img: "🫘", image: "https://images.unsplash.com/photo-1510639403341-7d16d53f7f04?auto=format&fit=crop&w=800&q=80" },
-      { name: "Groundnuts", soil: "Sandy loam, well-drained", season: "Nov–Dec", spacing: "45cm × 15cm", fertilizer: "Low N, P-rich", disease: "Rosette, Leaf Spot", yield: "0.8–1.5 t/ha", harvest: "Mar–Apr", img: "🥜", image: "https://images.unsplash.com/photo-1490276481064-6e8c91b40aaf?auto=format&fit=crop&w=800&q=80" },
-      { name: "Tomatoes", soil: "Rich loam, pH 6–6.8", season: "Apr–Jun (dry)", spacing: "60cm × 45cm", fertilizer: "High K + Ca", disease: "Blight, Bacterial Wilt", yield: "20–40 t/ha", harvest: "Jul–Sep", img: "🍅", image: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=800&q=80" },
-    ],
-    weather: { temp: 22, humidity: 58, rain: "4 months", condition: "Partly Cloudy", wind: "14 km/h", advisory: "Rain expected in 4 months." },
-    marketPrices: [
-      { crop: "Maize", price: "K300/50kg", change: "+3.2%", trend: "up" },
-      { crop: "Soybeans", price: "K400/kg", change: "+1.8%", trend: "up" },
-      { crop: "Groundnuts", price: "K1,800/50kg", change: "-0.5%", trend: "down" },
-      { crop: "Wheat", price: "K920/50kg", change: "+2.1%", trend: "up" },
-      { crop: "Cassava", price: "K420/50kg", change: "0.0%", trend: "flat" },
-    ],
-    posts: [
-      { id: 1, author: "Agri Expert", role: "expert", time: "2h", text: "Use compost to improve soil structure.", likes: 12 },
-      { id: 2, author: "Supplier Network", role: "supplier", time: "1d", text: "Selling quality maize seed this season.", likes: 5 },
-    ],
-    actions: [],
-  };
-}
-
-function saveDatabase(db) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-  } catch (error) {
-    console.error("Failed to save database:", error);
-  }
-}
-
-function normalizeUser(user) {
-  const roles = Array.isArray(user.roles)
-    ? user.roles
-    : user.role
-    ? [user.role]
-    : ["customer"];
-
-  return {
-    ...user,
-    roles,
-    role: user.role || roles[0],
-    verified: user.verified !== undefined ? user.verified : true,
-  };
-}
-
-function loadDatabase() {
-  if (typeof window === "undefined") return createDefaultDB();
-  try {
-    const payload = localStorage.getItem(STORAGE_KEY);
-    if (payload) {
-      const parsed = JSON.parse(payload);
-      const normalizedUsers = Array.isArray(parsed.users)
-        ? parsed.users.map(normalizeUser)
-        : [];
-      return {
-        ...createDefaultDB(),
-        ...parsed,
-        users: normalizedUsers,
-        actions: parsed.actions || [],
-        posts: parsed.posts || createDefaultDB().posts,
-      };
-    }
-  } catch (error) {
-    console.error("Failed to load database:", error);
-  }
-  const db = createDefaultDB();
-  saveDatabase(db);
-  return db;
-}
-
-const DB = loadDatabase();
-DB.save = () => saveDatabase(DB);
-DB.query = (table, predicate = () => true) => (DB[table] || []).filter(predicate);
-DB.insert = (table, row) => { DB[table].push(row); DB.save(); return row; };
-DB.update = (table, predicate, changes) => {
-  const record = (DB[table] || []).find(predicate);
-  if (record) {
-    Object.assign(record, changes);
-    DB.save();
-  }
-  return record;
-};
-DB.delete = (table, predicate) => {
-  const tableRef = DB[table] || [];
-  const index = tableRef.findIndex(predicate);
-  if (index >= 0) {
-    tableRef.splice(index, 1);
-    DB.save();
-    return true;
-  }
-  return false;
-};
-DB.recordAction = (userId, type, details) => {
-  const action = {
-    id: Date.now(),
-    userId,
-    type,
-    details,
-    timestamp: new Date().toISOString(),
-  };
-  DB.actions.unshift(action);
-  DB.save();
-  return action;
+const DEFAULT_WEATHER = {
+  temp: 22,
+  humidity: 58,
+  rain: "4 months",
+  condition: "Partly Cloudy",
+  wind: "14 km/h",
+  advisory: "Rain expected in 4 months.",
 };
 
 function isGmail(email) {
   return typeof email === "string" && email.toLowerCase().endsWith("@gmail.com");
 }
 
-function generateVerificationCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+const formatK = (n) => `K${Number(n || 0).toLocaleString()}`;
 
-async function sendVerificationCodeToGmail(email, code, name = "User") {
-  if (!isGmail(email)) return { success: false, error: "Only Gmail addresses are supported" };
-
+function saveActiveRole(role) {
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
-    const response = await fetch(`${apiUrl}/api/send-verification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, code, name }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("❌ Email service error:", data.error || "Unknown error");
-      return { success: false, error: data.error || "Failed to send verification code" };
-    }
-
-    console.log("✅ Verification code sent to", email);
-    return { success: true, message: data.message };
-  } catch (error) {
-    console.error("❌ Network error sending verification code:", error.message);
-    return { success: false, error: error.message };
+    if (role) localStorage.setItem(SESSION_ROLE_KEY, role);
+    else localStorage.removeItem(SESSION_ROLE_KEY);
+  } catch {
+    /* ignore */
   }
 }
 
-function loadCurrentUser() {
-  if (typeof window === "undefined") return null;
+function loadActiveRole() {
   try {
-    const payload = localStorage.getItem(SESSION_KEY);
-    return payload ? JSON.parse(payload) : null;
-  } catch (error) {
-    console.error("Failed to load current user:", error);
+    return localStorage.getItem(SESSION_ROLE_KEY);
+  } catch {
     return null;
   }
 }
-
-function saveCurrentUser(user) {
-  if (typeof window === "undefined") return;
-  try {
-    if (user) {
-      const safeUser = { ...user };
-      delete safeUser.password;
-      localStorage.setItem(SESSION_KEY, JSON.stringify(safeUser));
-    } else {
-      localStorage.removeItem(SESSION_KEY);
-    }
-  } catch (error) {
-    console.error("Failed to save current user:", error);
-  }
-}
-
-const WEATHER_STORAGE_KEY = "agriPlatformWeather";
 
 function loadSavedWeather() {
   if (typeof window === "undefined") return null;
   try {
     const payload = localStorage.getItem(WEATHER_STORAGE_KEY);
     return payload ? JSON.parse(payload) : null;
-  } catch (error) {
-    console.error("Failed to load saved weather:", error);
+  } catch {
     return null;
   }
 }
@@ -200,42 +51,10 @@ function saveWeather(weather) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(WEATHER_STORAGE_KEY, JSON.stringify(weather));
-  } catch (error) {
-    console.error("Failed to save weather:", error);
+  } catch {
+    /* ignore */
   }
 }
-
-async function fetchWeatherByCoords(lat, lon) {
-  try {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
-    const response = await fetch(`${apiUrl}/api/weather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
-    const data = await response.json();
-    if (!data || !data.success || !data.weather) {
-      throw new Error(data?.error || "Invalid weather response");
-    }
-    return data.weather;
-  } catch (error) {
-    console.error("❌ Failed to fetch weather by coordinates:", error.message);
-    return null;
-  }
-}
-
-async function fetchMarketPrices() {
-  try {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
-    const response = await fetch(`${apiUrl}/api/market-prices`);
-    const data = await response.json();
-    if (!data || !Array.isArray(data.prices)) {
-      throw new Error(data?.error || 'Invalid market price response');
-    }
-    return data;
-  } catch (error) {
-    console.error('❌ Failed to fetch live market prices:', error.message);
-    return { success: false, prices: [], error: error.message };
-  }
-}
-
-const formatK = (n) => `K${Number(n).toLocaleString()}`;
 
 /* ===========================
    Shared UI Shell
@@ -247,9 +66,9 @@ function Shell({ user, onLogout, children, activeTab, setActiveTab, weather }) {
     ? [["dashboard","📊","Dashboard"],["inventory","📦","Inventory"],["orders","📋","Orders"],["market","📈","Prices"],["community","💬","Community"]]
     : [["dashboard","📊","Dashboard"],["deliveries","🚚","Deliveries"],["map","🗺","Route Map"],["earnings","💰","Earnings"],["community","💬","Community"]];
 
-  const weatherText = weather?.condition || DB.weather.condition;
-  const temperature = weather?.temp != null ? weather.temp : DB.weather.temp;
-  const rainText = weather?.rain || DB.weather.rain;
+  const weatherText = weather?.condition || DEFAULT_WEATHER.condition;
+  const temperature = weather?.temp != null ? weather.temp : DEFAULT_WEATHER.temp;
+  const rainText = weather?.rain || DEFAULT_WEATHER.rain;
 
   return (
     <div style={{ minHeight: "100vh", background: "#F1F4ED", fontFamily: "'DM Sans', sans-serif" }}>
@@ -327,6 +146,7 @@ function AuthScreen({ onLogin }) {
   const [stage, setStage] = useState("auth");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const roleConfig = {
     customer: { label: "Customer", icon: "🛒", desc: "Buy seeds, fertilizer & produce", color: "#4CAF50" },
@@ -337,113 +157,76 @@ function AuthScreen({ onLogin }) {
   const resetAuthState = () => {
     setError("");
     setMessage("");
-    setVerificationCode("");
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     resetAuthState();
-    const user = DB.users.find(u => u.email === email);
-    if (!user || user.password !== password) {
-      setError("Invalid credentials. Check email and password.");
-      return;
-    }
-    if (!user.roles?.includes(role)) {
-      setError("This account does not have that role. Please choose a different role or register for it.");
-      return;
-    }
-    if (!user.verified) {
-      if (!user.verificationCode) {
-        const code = generateVerificationCode();
-        DB.update("users", u => u.email === user.email, { verificationCode: code, verified: false });
-        sendVerificationCodeToGmail(user.email, code, user.name);
+    if (!email || !password) { setError("Please provide email and password."); return; }
+    setBusy(true);
+    try {
+      const data = await api.login({ email, password, role });
+      if (data.requiresVerification) {
+        setVerificationEmail(data.email || email);
+        setStage("verify");
+        setMessage(data.message || "Enter the verification code sent to your Gmail.");
+        return;
       }
-      setVerificationEmail(email);
-      setStage("verify");
-      setMessage("This account is not verified. Enter the verification code sent to your Gmail.");
-      return;
+      onLogin(data.user, data.token);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
     }
-    DB.recordAction(user.id, "login", { role });
-    onLogin({ ...user, role });
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     resetAuthState();
     if (!name || !email || !password) { setError("Please fill all fields."); return; }
     if (!isGmail(email)) { setError("Please use a Gmail address to register."); return; }
     if (selectedRoles.length === 0) { setError("Select at least one role."); return; }
-
-    const existing = DB.users.find(u => u.email === email);
-    
-    if (existing) {
-      // Allow adding new roles to existing account
-      const newRoles = [...new Set([...existing.roles, ...selectedRoles])]; // Merge and deduplicate
-      
-      if (existing.password !== password) {
-        setError("Password mismatch. Please use the password associated with this email.");
-        return;
-      }
-      
-      DB.update("users", u => u.email === email, { roles: newRoles, role: newRoles[0] });
-      DB.recordAction(existing.id, "add_roles", { newRoles });
-      
-      if (!existing.verified) {
-        const code = generateVerificationCode();
-        DB.update("users", u => u.email === email, { verificationCode: code });
-        sendVerificationCodeToGmail(email, code, existing.name);
-        setVerificationEmail(email);
+    setBusy(true);
+    try {
+      const data = await api.register({ name, email, password, roles: selectedRoles });
+      if (data.requiresVerification) {
+        setVerificationEmail(data.email || email);
         setStage("verify");
-        setMessage("Roles added! A verification code has been sent to your Gmail to complete the process.");
+        setMessage(data.message || "A verification code has been sent to your Gmail.");
       } else {
-        setMessage("Roles added successfully! You can now use these roles to login.");
-        setTimeout(() => setTab("login"), 2000);
+        setMessage(data.message || "Roles added successfully! You can now login.");
+        setTimeout(() => { setTab("login"); setStage("auth"); }, 2000);
       }
-      return;
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
     }
-
-    const code = generateVerificationCode();
-    const newUser = {
-      id: Date.now(),
-      name,
-      email,
-      password,
-      roles: selectedRoles,
-      role: selectedRoles[0],
-      verified: false,
-      verificationCode: code,
-      avatar: name.slice(0,2).toUpperCase(),
-      location: "Zambia"
-    };
-
-    DB.insert("users", newUser);
-    DB.recordAction(newUser.id, "register", { email: newUser.email, roles: selectedRoles });
-    sendVerificationCodeToGmail(email, code, name);
-    setVerificationEmail(email);
-    setStage("verify");
-    setMessage("A verification code has been sent to your Gmail. Enter it below to complete registration.");
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     resetAuthState();
-    const user = DB.users.find(u => u.email === verificationEmail);
-    if (!user) { setError("No account found for this email."); return; }
-    if (user.verificationCode !== verificationCode.trim()) {
-      setError("Verification code is incorrect.");
-      return;
+    if (!verificationCode.trim()) { setError("Enter the verification code."); return; }
+    setBusy(true);
+    try {
+      const data = await api.verify({ email: verificationEmail || email, code: verificationCode });
+      onLogin(data.user, data.token);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
     }
-    DB.update("users", u => u.email === verificationEmail, { verified: true, verificationCode: null });
-    DB.recordAction(user.id, "verify_email", { email: user.email });
-    onLogin({ ...user, verified: true });
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     resetAuthState();
-    const user = DB.users.find(u => u.email === verificationEmail || u.email === email);
-    if (!user) { setError("No account found to resend code."); return; }
-    const code = generateVerificationCode();
-    DB.update("users", u => u.email === user.email, { verificationCode: code, verified: false });
-    sendVerificationCodeToGmail(user.email, code, user.name);
-    setVerificationEmail(user.email);
-    setMessage("A new verification code has been sent to your Gmail.");
+    setBusy(true);
+    try {
+      const data = await api.resend(verificationEmail || email);
+      setMessage(data.message || "A new verification code has been sent to your Gmail.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -457,6 +240,7 @@ function AuthScreen({ onLogin }) {
         .auth-input::placeholder { color: rgba(255,255,255,0.72); }
         .auth-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #7CB342, #2E7D32); border: none; border-radius: 14px; color: #fff; font-size: 16px; font-family: 'DM Sans', sans-serif; font-weight: 700; cursor: pointer; transition: transform 0.2s, opacity 0.2s; letter-spacing: 0.5px; box-shadow: 0 18px 40px rgba(0,0,0,0.16); }
         .auth-btn:hover { opacity: 0.94; transform: translateY(-2px); }
+        .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .role-card { flex: 1; padding: 16px 12px; border: 1.5px solid rgba(255,255,255,0.16); border-radius: 16px; cursor: pointer; text-align: center; transition: all 0.25s; background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); min-width: 110px; }
         .role-card.active { border-color: rgba(193,255,193,0.9); background: rgba(255,255,255,0.14); box-shadow: 0 18px 40px rgba(46,125,50,0.16); }
         .role-card:hover { transform: translateY(-2px); border-color: rgba(193,255,193,0.7); }
@@ -481,7 +265,7 @@ function AuthScreen({ onLogin }) {
           </div>
           <div style={{ display: "flex", gap: 10, background: "rgba(255,255,255,0.08)", borderRadius: 18, padding: 6, marginBottom: 28 }}>
             {["login","register"].map(t => (
-              <button key={t} onClick={() => { setTab(t); setError(""); setMessage(""); }} style={{ flex: 1, minWidth: 120, padding: "12px 0", border: "none", borderRadius: 16, background: tab === t ? "rgba(193,255,193,0.18)" : "transparent", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, cursor: "pointer", fontSize: 14, transition: "background 0.2s, transform 0.2s", boxShadow: tab === t ? "0 12px 24px rgba(40,80,0,0.16)" : "none" }}>
+              <button key={t} onClick={() => { setTab(t); setStage("auth"); setError(""); setMessage(""); }} style={{ flex: 1, minWidth: 120, padding: "12px 0", border: "none", borderRadius: 16, background: tab === t ? "rgba(193,255,193,0.18)" : "transparent", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, cursor: "pointer", fontSize: 14, transition: "background 0.2s, transform 0.2s", boxShadow: tab === t ? "0 12px 24px rgba(40,80,0,0.16)" : "none" }}>
                 {t === "login" ? "Sign In" : "Register"}
               </button>
             ))}
@@ -518,13 +302,13 @@ function AuthScreen({ onLogin }) {
             <div style={{ marginTop: 16, padding: "18px", background: "rgba(255,255,255,0.08)", borderRadius: 12 }}>
               <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}>Enter the verification code sent to {verificationEmail || email}.</p>
               <input className="auth-input" placeholder="Verification code" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} />
-              <button className="auth-btn" style={{ marginTop: 20 }} onClick={handleVerify}>Verify Account</button>
-              <button className="auth-btn" style={{ marginTop: 10, background: "rgba(255,255,255,0.12)", color: "#fff" }} onClick={handleResend}>Resend Code</button>
+              <button className="auth-btn" style={{ marginTop: 20 }} onClick={handleVerify} disabled={busy}>{busy ? "Verifying…" : "Verify Account"}</button>
+              <button className="auth-btn" style={{ marginTop: 10, background: "rgba(255,255,255,0.12)", color: "#fff" }} onClick={handleResend} disabled={busy}>Resend Code</button>
             </div>
           ) : (
             <>
-              <button className="auth-btn" style={{ marginTop: 20 }} onClick={tab === "login" ? handleLogin : handleRegister}>
-                {tab === "login" ? "Sign In to AgriConnect" : "Create Account"}
+              <button className="auth-btn" style={{ marginTop: 20 }} onClick={tab === "login" ? handleLogin : handleRegister} disabled={busy}>
+                {busy ? "Please wait…" : tab === "login" ? "Sign In to AgriConnect" : "Create Account"}
               </button>
               {tab === "register" && (
                 <div style={{ marginTop: 16, padding: "12px", background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>
@@ -542,12 +326,26 @@ function AuthScreen({ onLogin }) {
 /* ===========================
    Customer Market (with cart)
    =========================== */
-function CustomerMarket({ user }) {
+function CustomerMarket() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [cart, setCart] = useState([]);
   const [ordered, setOrdered] = useState(false);
+  const [orderError, setOrderError] = useState(null);
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("All");
-  const cats = ["All", ...Array.from(new Set(DB.products.map(p => p.category)))];
+
+  useEffect(() => {
+    let mounted = true;
+    api.getProducts()
+      .then(d => { if (mounted) setProducts(d.products || []); })
+      .catch(e => { if (mounted) setLoadError(e.message); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const cats = ["All", ...Array.from(new Set(products.map(p => p.category)))];
 
   const addToCart = (prod) => {
     setCart(c => {
@@ -558,31 +356,20 @@ function CustomerMarket({ user }) {
 
   const total = cart.reduce((a, b) => a + b.price * b.qty, 0);
 
-  const makeId = () => Date.now() + Math.floor(Math.random() * 1000);
-
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (cart.length === 0) return;
-    const newOrders = cart.map(item => {
-      const order = {
-        id: makeId(),
-        customerId: user.id,
-        productId: item.id,
-        qty: item.qty,
-        total: item.price * item.qty,
-        status: "Pending",
-        date: new Date().toISOString().split("T")[0],
-        transportId: null
-      };
-      DB.insert("orders", order);
-      return order;
-    });
-    DB.recordAction(user.id, "place_order", { orderIds: newOrders.map(o => o.id), total: total, items: cart.map(item => ({ productId: item.id, qty: item.qty, price: item.price })) });
-    setCart([]);
-    setOrdered(true);
-    setTimeout(() => setOrdered(false), 3000);
+    setOrderError(null);
+    try {
+      await api.placeOrder(cart.map(item => ({ productId: item.id, qty: item.qty })));
+      setCart([]);
+      setOrdered(true);
+      setTimeout(() => setOrdered(false), 3000);
+    } catch (err) {
+      setOrderError(err.message);
+    }
   };
 
-  const filtered = DB.products
+  const filtered = products
     .filter(p => (cat === "All" || p.category === cat))
     .filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -590,6 +377,7 @@ function CustomerMarket({ user }) {
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 20 }}>Agricultural Marketplace 🛒</h2>
       {ordered && <div style={{ background: "#E8F5E9", border: "1px solid #4CAF50", borderRadius: 10, padding: "12px 18px", marginBottom: 16, color: "#2E7D32", fontWeight: 600 }}>✅ Order placed successfully! Transport will be assigned shortly.</div>}
+      {orderError && <div style={{ background: "#FFEBEE", border: "1px solid #EF9A9A", borderRadius: 10, padding: "12px 18px", marginBottom: 16, color: "#C62828", fontWeight: 600 }}>{orderError}</div>}
 
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <input type="text" placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 200 }} />
@@ -600,35 +388,35 @@ function CustomerMarket({ user }) {
         </div>
       </div>
 
+      {loading && <div style={{ color: "#666", marginBottom: 16 }}>Loading products…</div>}
+      {loadError && <div style={{ color: "#C62828", marginBottom: 16 }}>Could not load products: {loadError}</div>}
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 16 }}>
-          {filtered.map(p => {
-            const supplier = DB.users.find(u => u.id === p.supplierId);
-            return (
-              <div key={p.id} className="card" style={{ position: "relative", overflow: "hidden", minHeight: 360, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                <div style={{ borderRadius: 22, overflow: "hidden", minHeight: 190, marginBottom: 18, position: "relative", background: `url(${p.image}) center/cover no-repeat` }}>
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.48))" }} />
-                  <div style={{ position: "absolute", left: 16, top: 16, padding: "6px 12px", borderRadius: 999, background: "rgba(255,255,255,0.92)", color: "#2E7D32", fontSize: 11, fontWeight: 700, letterSpacing: "0.5px" }}>{p.category}</div>
-                  <div style={{ position: "absolute", left: 16, bottom: 16, right: 16, color: "#fff", fontSize: 18, fontWeight: 700, textShadow: "0 3px 14px rgba(0,0,0,0.48)" }}>{p.name}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>by {supplier?.name || 'Local supplier'}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: 20, color: "#2E7D32" }}>{formatK(p.price)}</div>
-                    <div style={{ fontSize: 12, color: "#888" }}>per {p.unit}</div>
-                  </div>
-                  <div style={{ background: "#F1F8E9", borderRadius: 12, padding: "12px 14px", marginBottom: 14, fontSize: 12, color: "#4F6228" }}>
-                    <span style={{ fontWeight: 700, color: "#2E7D32" }}>Forecast:</span> Estimated {formatK(p.predictedPrice)} by {p.predictedAvail}. Demand: <span style={{ color: p.demand === "High" ? "#C62828" : p.demand === "Medium" ? "#E65100" : "#2E7D32", fontWeight: 700 }}>{p.demand}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-                    <span className="badge" style={{ background: "#E8F5E9", color: "#2E7D32" }}>Stock: {p.stock}</span>
-                    <span className="badge" style={{ background: "#E3F2FD", color: "#1565C0" }}>Season: {p.season}</span>
-                  </div>
-                  <button className="btn-primary" style={{ width: "100%" }} onClick={() => addToCart(p)}>Add to Cart</button>
-                </div>
+          {filtered.map(p => (
+            <div key={p.id} className="card" style={{ position: "relative", overflow: "hidden", minHeight: 360, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div style={{ borderRadius: 22, overflow: "hidden", minHeight: 190, marginBottom: 18, position: "relative", background: `url(${p.image}) center/cover no-repeat` }}>
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.48))" }} />
+                <div style={{ position: "absolute", left: 16, top: 16, padding: "6px 12px", borderRadius: 999, background: "rgba(255,255,255,0.92)", color: "#2E7D32", fontSize: 11, fontWeight: 700, letterSpacing: "0.5px" }}>{p.category}</div>
+                <div style={{ position: "absolute", left: 16, bottom: 16, right: 16, color: "#fff", fontSize: 18, fontWeight: 700, textShadow: "0 3px 14px rgba(0,0,0,0.48)" }}>{p.name}</div>
               </div>
-            );
-          })}
+              <div>
+                <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>by {p.supplierName || 'Local supplier'}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 20, color: "#2E7D32" }}>{formatK(p.price)}</div>
+                  <div style={{ fontSize: 12, color: "#888" }}>per {p.unit}</div>
+                </div>
+                <div style={{ background: "#F1F8E9", borderRadius: 12, padding: "12px 14px", marginBottom: 14, fontSize: 12, color: "#4F6228" }}>
+                  <span style={{ fontWeight: 700, color: "#2E7D32" }}>Forecast:</span> Estimated {formatK(p.predictedPrice)} by {p.predictedAvail}. Demand: <span style={{ color: p.demand === "High" ? "#C62828" : p.demand === "Medium" ? "#E65100" : "#2E7D32", fontWeight: 700 }}>{p.demand}</span>
+                </div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                  <span className="badge" style={{ background: "#E8F5E9", color: "#2E7D32" }}>Stock: {p.stock}</span>
+                  <span className="badge" style={{ background: "#E3F2FD", color: "#1565C0" }}>Season: {p.season}</span>
+                </div>
+                <button className="btn-primary" style={{ width: "100%" }} onClick={() => addToCart(p)}>Add to Cart</button>
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="card" style={{ position: "sticky", top: 20, height: "fit-content" }}>
@@ -662,8 +450,19 @@ function CustomerMarket({ user }) {
 /* ===========================
    Customer Dashboard
    =========================== */
-function CustomerDashboard({ user }) {
-  const myOrders = DB.orders.filter(o => o.customerId === user.id);
+function CustomerDashboard({ user, weather }) {
+  const [myOrders, setMyOrders] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getCustomerOrders()
+      .then(d => { if (mounted) setMyOrders(d.orders || []); })
+      .catch(() => { if (mounted) setMyOrders([]); });
+    return () => { mounted = false; };
+  }, []);
+
+  const advisory = weather?.advisory || DEFAULT_WEATHER.advisory;
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro', serif", fontSize: 28, color: "#1B4332", marginBottom: 6 }}>Good morning, {user.name.split(" ")[0]} 👋</h2>
@@ -673,7 +472,7 @@ function CustomerDashboard({ user }) {
         <span style={{ fontSize: 22 }}>⚠️</span>
         <div>
           <div style={{ fontWeight: 600, fontSize: 13, color: "#E65100" }}>Farming Advisory</div>
-          <div style={{ fontSize: 13, color: "#5D4037" }}>{DB.weather.advisory}</div>
+          <div style={{ fontSize: 13, color: "#5D4037" }}>{advisory}</div>
         </div>
       </div>
 
@@ -698,17 +497,14 @@ function CustomerDashboard({ user }) {
           <table className="tbl" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr>{["Product", "Qty", "Total", "Status"].map(h => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>
-              {myOrders.map(o => {
-                const prod = DB.products.find(p => p.id === o.productId);
-                return (
-                  <tr key={o.id}>
-                    <td>{prod?.img} {prod?.name}</td>
-                    <td>{o.qty}</td>
-                    <td style={{ fontWeight: 600 }}>{formatK(o.total)}</td>
-                    <td><span className="badge" style={{ background: o.status === "Delivered" ? "#E8F5E9" : "#FFF8E1", color: o.status === "Delivered" ? "#2E7D32" : "#F57F17" }}>{o.status}</span></td>
-                  </tr>
-                );
-              })}
+              {myOrders.map(o => (
+                <tr key={o.id}>
+                  <td>{o.productImg} {o.productName}</td>
+                  <td>{o.qty}</td>
+                  <td style={{ fontWeight: 600 }}>{formatK(o.total)}</td>
+                  <td><span className="badge" style={{ background: o.status === "Delivered" ? "#E8F5E9" : "#FFF8E1", color: o.status === "Delivered" ? "#2E7D32" : "#F57F17" }}>{o.status}</span></td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -723,13 +519,23 @@ function CustomerDashboard({ user }) {
    Crops Page
    =========================== */
 function CropsPage() {
+  const [crops, setCrops] = useState([]);
   const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getCrops()
+      .then(d => { if (mounted) setCrops(d.crops || []); })
+      .catch(() => { if (mounted) setCrops([]); });
+    return () => { mounted = false; };
+  }, []);
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 6 }}>Crop Knowledge Center 🌾</h2>
       <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>Comprehensive planting guides for Zambian conditions.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 16, marginBottom: 24 }}>
-        {DB.cropData.map((c, i) => (
+        {crops.map((c, i) => (
           <div key={i} className="card" style={{ cursor: "pointer", border: selected?.name === c.name ? "2px solid #4CAF50" : "2px solid transparent", transition: "all 0.2s" }} onClick={() => setSelected(c)}>
             <div style={{ fontSize: 48, textAlign: "center", marginBottom: 10 }}>{c.img}</div>
             <div style={{ fontFamily: "'Crimson Pro',serif", fontSize: 20, fontWeight: 600, textAlign: "center", color: "#1B4332" }}>{c.name}</div>
@@ -760,7 +566,7 @@ function CropsPage() {
 }
 
 /* ===========================
-   Community Page
+   Weather Page
    =========================== */
 function WeatherPage({ weather, status }) {
   return (
@@ -805,24 +611,32 @@ function WeatherPage({ weather, status }) {
   );
 }
 
+/* ===========================
+   Community Page
+   =========================== */
 function CommunityPage({ user }) {
   const [newPost, setNewPost] = useState("");
-  const [posts, setPosts] = useState(() => DB.posts || []);
+  const [posts, setPosts] = useState([]);
+  const [error, setError] = useState(null);
 
-  const post = () => {
+  useEffect(() => {
+    let mounted = true;
+    api.getPosts()
+      .then(d => { if (mounted) setPosts(d.posts || []); })
+      .catch(e => { if (mounted) setError(e.message); });
+    return () => { mounted = false; };
+  }, []);
+
+  const post = async () => {
     if (!newPost.trim()) return;
-    const p = {
-      id: Date.now(),
-      author: user?.name || "Anonymous",
-      role: user?.role || "member",
-      time: "just now",
-      text: newPost.trim(),
-      likes: 0
-    };
-    DB.insert("posts", p);
-    DB.recordAction(user.id, "community_post", { postId: p.id, text: p.text });
-    setPosts(prev => [p, ...prev]);
-    setNewPost("");
+    setError(null);
+    try {
+      const data = await api.addPost({ text: newPost.trim(), role: user?.role });
+      setPosts(prev => [data.post, ...prev]);
+      setNewPost("");
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -830,6 +644,7 @@ function CommunityPage({ user }) {
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 20 }}>Community & Expert Support 💬</h2>
       <div className="card" style={{ marginBottom: 20 }}>
         <textarea value={newPost} onChange={e => setNewPost(e.target.value)} placeholder="Share a tip, ask a question, or post an update..." style={{ width: "100%", border: "1.5px solid #e0e0e0", borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans',sans-serif", fontSize: 14, resize: "vertical", minHeight: 80, outline: "none" }} />
+        {error && <div style={{ color: "#C62828", fontSize: 13, marginTop: 8 }}>{error}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
           <button className="btn-primary" onClick={post}>Post to Community</button>
         </div>
@@ -861,10 +676,24 @@ function CommunityPage({ user }) {
 /* ===========================
    Supplier Views
    =========================== */
-function SupplierDashboard({ user }) {
-  const myProducts = DB.products.filter(p => p.supplierId === user.id);
-  const myOrders = DB.orders.filter(o => myProducts.find(p => p.id === o.productId));
+function SupplierDashboard() {
+  const [myProducts, setMyProducts] = useState([]);
+  const [myOrders, setMyOrders] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([api.getMyProducts(), api.getSupplierOrders()])
+      .then(([prodData, orderData]) => {
+        if (!mounted) return;
+        setMyProducts(prodData.products || []);
+        setMyOrders(orderData.orders || []);
+      })
+      .catch(() => { /* keep empty state */ });
+    return () => { mounted = false; };
+  }, []);
+
   const revenue = myOrders.reduce((a, b) => a + b.total, 0);
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 20 }}>Supplier Dashboard 🌾</h2>
@@ -907,22 +736,46 @@ function SupplierDashboard({ user }) {
   );
 }
 
-function SupplierInventory({ user }) {
-  const myProducts = DB.products.filter(p => p.supplierId === user.id);
+function SupplierInventory() {
+  const [myProducts, setMyProducts] = useState([]);
   const [form, setForm] = useState({ name: "", category: "Seeds", price: "", unit: "", stock: "", season: "" });
   const [added, setAdded] = useState(false);
-  const submit = () => {
-    if (!form.name || !form.price) return;
-    const newProduct = { id: Date.now(), ...form, price: +form.price, stock: +form.stock, supplierId: user.id, predictedAvail: "TBD", predictedPrice: +form.price * 1.05, demand: "Medium", img: "📦" };
-    DB.insert("products", newProduct);
-    DB.recordAction(user.id, "add_product", { productId: newProduct.id, name: newProduct.name, price: newProduct.price });
-    setAdded(true); setForm({ name: "", category: "Seeds", price: "", unit: "", stock: "", season: "" });
-    setTimeout(() => setAdded(false), 2500);
+  const [error, setError] = useState(null);
+
+  const loadProducts = () => {
+    api.getMyProducts()
+      .then(d => setMyProducts(d.products || []))
+      .catch(() => setMyProducts([]));
   };
+
+  useEffect(() => { loadProducts(); }, []);
+
+  const submit = async () => {
+    if (!form.name || !form.price) return;
+    setError(null);
+    try {
+      await api.addProduct({
+        name: form.name,
+        category: form.category,
+        price: form.price,
+        unit: form.unit,
+        stock: form.stock,
+        season: form.season,
+      });
+      setAdded(true);
+      setForm({ name: "", category: "Seeds", price: "", unit: "", stock: "", season: "" });
+      loadProducts();
+      setTimeout(() => setAdded(false), 2500);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 20 }}>Inventory Management 📦</h2>
       {added && <div style={{ background: "#E8F5E9", border: "1px solid #4CAF50", borderRadius: 10, padding: "12px 18px", marginBottom: 16, color: "#2E7D32", fontWeight: 600 }}>✅ Product added successfully!</div>}
+      {error && <div style={{ background: "#FFEBEE", border: "1px solid #EF9A9A", borderRadius: 10, padding: "12px 18px", marginBottom: 16, color: "#C62828", fontWeight: 600 }}>{error}</div>}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20 }}>
         <div className="card">
           <h3 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 20, color: "#1B4332", marginBottom: 16 }}>Current Inventory</h3>
@@ -961,9 +814,17 @@ function SupplierInventory({ user }) {
   );
 }
 
-function SupplierOrders({ user }) {
-  const myProducts = DB.products.filter(p => p.supplierId === user.id);
-  const myOrders = DB.orders.filter(o => myProducts.find(p => p.id === o.productId));
+function SupplierOrders() {
+  const [myOrders, setMyOrders] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getSupplierOrders()
+      .then(d => { if (mounted) setMyOrders(d.orders || []); })
+      .catch(() => { if (mounted) setMyOrders([]); });
+    return () => { mounted = false; };
+  }, []);
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 20 }}>Incoming Orders 📋</h2>
@@ -971,21 +832,17 @@ function SupplierOrders({ user }) {
         <table className="tbl" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["Order ID", "Product", "Qty", "Total", "Date", "Status", "Transport"].map(h => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>
-            {myOrders.map(o => {
-              const prod = DB.products.find(p => p.id === o.productId);
-              const transporter = DB.users.find(u => u.id === o.transportId);
-              return (
-                <tr key={o.id}>
-                  <td style={{ fontWeight: 600 }}>#ORD-{o.id}</td>
-                  <td>{prod?.img} {prod?.name}</td>
-                  <td>{o.qty}</td>
-                  <td style={{ fontWeight: 600 }}>{formatK(o.total)}</td>
-                  <td>{o.date}</td>
-                  <td><span className="badge" style={{ background: o.status === "Delivered" ? "#E8F5E9" : o.status === "In Transit" ? "#E3F2FD" : "#FFF8E1", color: o.status === "Delivered" ? "#2E7D32" : o.status === "In Transit" ? "#1565C0" : "#F57F17" }}>{o.status}</span></td>
-                  <td style={{ fontSize: 12, color: "#888" }}>{transporter?.name || "Unassigned"}</td>
-                </tr>
-              );
-            })}
+            {myOrders.map(o => (
+              <tr key={o.id}>
+                <td style={{ fontWeight: 600 }}>#ORD-{o.id}</td>
+                <td>{o.productImg} {o.productName}</td>
+                <td>{o.qty}</td>
+                <td style={{ fontWeight: 600 }}>{formatK(o.total)}</td>
+                <td>{o.date}</td>
+                <td><span className="badge" style={{ background: o.status === "Delivered" ? "#E8F5E9" : o.status === "In Transit" ? "#E3F2FD" : "#FFF8E1", color: o.status === "Delivered" ? "#2E7D32" : o.status === "In Transit" ? "#1565C0" : "#F57F17" }}>{o.status}</span></td>
+                <td style={{ fontSize: 12, color: "#888" }}>{o.transporterName || "Unassigned"}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -997,8 +854,18 @@ function SupplierOrders({ user }) {
    Transport Views
    =========================== */
 function TransportDashboard({ user }) {
-  const myDeliveries = DB.deliveries.filter(d => d.transportId === user.id);
+  const [myDeliveries, setMyDeliveries] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getMyDeliveries()
+      .then(d => { if (mounted) setMyDeliveries(d.deliveries || []); })
+      .catch(() => { if (mounted) setMyDeliveries([]); });
+    return () => { mounted = false; };
+  }, []);
+
   const earnings = myDeliveries.filter(d => d.status === "Completed").reduce((a, b) => a + b.fee, 0);
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 20 }}>Transport Dashboard 🚚</h2>
@@ -1046,50 +913,56 @@ function TransportDashboard({ user }) {
               <span style={{ fontSize: 13, fontWeight: 600 }}>{v}</span>
             </div>
           ))}
-          <div style={{ marginTop: 14, padding: "12px", background: "#E8F5E9", borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#2E7D32", fontWeight: 600 }}>🔔 New Delivery Request</div>
-            <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>Chisamba → Lusaka (110km) — K250 fee</div>
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <button className="btn-primary" style={{ flex: 1, padding: "8px" }}>Accept</button>
-              <button className="btn-outline" style={{ flex: 1, padding: "8px" }}>Decline</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function TransportDeliveries({ user }) {
-  const pending = DB.orders.filter(o => !o.transportId || o.status === "Pending");
+function TransportDeliveries() {
+  const [pending, setPending] = useState([]);
+  const [notice, setNotice] = useState(null);
+
+  const load = () => {
+    api.getAvailableDeliveries()
+      .then(d => setPending(d.deliveries || []))
+      .catch(() => setPending([]));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const accept = async (orderId) => {
+    setNotice(null);
+    try {
+      await api.acceptDelivery(orderId);
+      setNotice("Delivery accepted! Navigate to Chisamba to pick up the order.");
+      load();
+    } catch (err) {
+      setNotice(err.message);
+    }
+  };
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 20 }}>Available Deliveries 🚚</h2>
+      {notice && <div style={{ background: "#E8F5E9", border: "1px solid #4CAF50", borderRadius: 10, padding: "12px 18px", marginBottom: 16, color: "#2E7D32", fontWeight: 600 }}>{notice}</div>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 16 }}>
-        {pending.map(o => {
-          const prod = DB.products.find(p => p.id === o.productId);
-          const customer = DB.users.find(u => u.id === o.customerId);
-          return (
-            <div key={o.id} className="card" style={{ border: "1.5px solid #E3F2FD" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, color: "#1B4332", fontSize: 15 }}>Order #{o.id}</span>
-                <span className="badge" style={{ background: "#E3F2FD", color: "#1565C0" }}>{o.status}</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, color: "#555" }}>
-                <div>📦 {prod?.img} {prod?.name} × {o.qty}</div>
-                <div>👤 Customer: {customer?.name}</div>
-                <div>📍 From: Chisamba → To: {customer?.location}</div>
-                <div>📅 Order date: {o.date}</div>
-                <div style={{ fontWeight: 700, color: "#2E7D32", fontSize: 15 }}>Delivery fee: K250</div>
-              </div>
-              <button className="btn-primary" style={{ width: "100%", marginTop: 14 }} onClick={() => {
-              DB.update("orders", item => item.id === o.id, { transportId: user.id, status: "In Transit" });
-              DB.recordAction(user.id, "accept_delivery", { orderId: o.id, customerId: o.customerId });
-              alert("Delivery accepted! Navigate to Chisamba to pick up the order.");
-            }}>Accept Delivery</button>
+        {pending.map(o => (
+          <div key={o.id} className="card" style={{ border: "1.5px solid #E3F2FD" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+              <span style={{ fontWeight: 700, color: "#1B4332", fontSize: 15 }}>Order #{o.id}</span>
+              <span className="badge" style={{ background: "#E3F2FD", color: "#1565C0" }}>{o.status}</span>
             </div>
-          );
-        })}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, color: "#555" }}>
+              <div>📦 {o.productImg} {o.productName} × {o.qty}</div>
+              <div>👤 Customer: {o.customerName}</div>
+              <div>📍 From: Chisamba → To: {o.customerLocation}</div>
+              <div>📅 Order date: {o.date}</div>
+              <div style={{ fontWeight: 700, color: "#2E7D32", fontSize: 15 }}>Delivery fee: {formatK(o.deliveryFee)}</div>
+            </div>
+            <button className="btn-primary" style={{ width: "100%", marginTop: 14 }} onClick={() => accept(o.id)}>Accept Delivery</button>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1103,25 +976,37 @@ function MarketPricesPage() {
   const [provider, setProvider] = useState('Silv Data');
   const [priceError, setPriceError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState([]);
 
   useEffect(() => {
     let mounted = true;
     const loadPrices = async () => {
       setIsLoading(true);
-      const data = await fetchMarketPrices();
-      if (!mounted) return;
-      if (data.success && data.source === 'Silv Data' && data.prices.length > 0) {
-        setLivePrices(data.prices);
-        setProvider('Silv Data');
-        setPriceError(null);
-      } else {
-        setLivePrices([]);
-        setProvider(data.source || 'Silv Data');
-        setPriceError(data.error || 'Silv commodity prices are currently unavailable.');
+      try {
+        const data = await api.getMarketPrices();
+        if (!mounted) return;
+        if (data.success && data.source === 'Silv Data' && data.prices.length > 0) {
+          setLivePrices(data.prices);
+          setProvider('Silv Data');
+          setPriceError(null);
+        } else {
+          setLivePrices([]);
+          setProvider(data.source || 'Silv Data');
+          setPriceError(data.error || 'Silv commodity prices are currently unavailable.');
+        }
+      } catch (err) {
+        if (mounted) {
+          setLivePrices([]);
+          setPriceError(err.message);
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-      setIsLoading(false);
     };
     loadPrices();
+    api.getProducts()
+      .then(d => { if (mounted) setProducts(d.products || []); })
+      .catch(() => { /* ignore */ });
     return () => { mounted = false; };
   }, []);
 
@@ -1165,7 +1050,7 @@ function MarketPricesPage() {
         <table className="tbl" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["Seed/Product", "Current Price", "Predicted Price", "Availability", "Demand", "Advice"].map(h => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>
-            {DB.products.map(p => (
+            {products.map(p => (
               <tr key={p.id}>
                 <td>{p.img} {p.name}</td>
                 <td>{formatK(p.price)}</td>
@@ -1185,7 +1070,6 @@ function MarketPricesPage() {
 function LivePricesDashboardWidget() {
   const [livePrices, setLivePrices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [useFallback, setUseFallback] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -1193,17 +1077,23 @@ function LivePricesDashboardWidget() {
     const load = async () => {
       setIsLoading(true);
       setError(null);
-      const data = await fetchMarketPrices();
-      if (!mounted) return;
-      if (data.success && data.prices.length > 0) {
-        setLivePrices(data.prices.slice(0, 4));
-        setUseFallback(false);
-      } else {
-        setLivePrices(DB.marketPrices.slice(0, 4));
-        setUseFallback(true);
-        setError(data.error || 'Live Silv commodity data is unavailable. Showing local merchant prices instead.');
+      try {
+        const data = await api.getMarketPrices();
+        if (!mounted) return;
+        if (data.success && data.prices.length > 0) {
+          setLivePrices(data.prices.slice(0, 4));
+        } else {
+          setLivePrices([]);
+          setError(data.error || 'Live Silv commodity data is currently unavailable.');
+        }
+      } catch (err) {
+        if (mounted) {
+          setLivePrices([]);
+          setError(err.message);
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-      setIsLoading(false);
     };
     load();
     return () => { mounted = false; };
@@ -1214,11 +1104,11 @@ function LivePricesDashboardWidget() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <h3 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 20, color: "#1B4332", marginBottom: 6 }}>Live Commodity Prices</h3>
-          <div style={{ fontSize: 12, color: "#666" }}>{useFallback ? 'Local merchant prices' : 'Updated from Silv Data'}</div>
+          <div style={{ fontSize: 12, color: "#666" }}>Updated from Silv Data</div>
         </div>
         {isLoading && <div style={{ fontSize: 12, color: "#2E7D32" }}>Refreshing prices…</div>}
       </div>
-      {useFallback && <div style={{ marginBottom: 16, color: "#795548", fontSize: 13, padding: "12px 14px", background: "#FFF8E1", borderRadius: 12 }}>Live Silv data is unavailable, so local merchant prices are shown instead.</div>}
+      {error && <div style={{ marginBottom: 16, color: "#C62828", fontSize: 13, padding: "12px 14px", background: "#FFEBEE", borderRadius: 12 }}>{error}</div>}
       {livePrices.length === 0 && !isLoading ? (
         <div style={{ color: "#555", fontSize: 13, background: "#F9FBF7", borderRadius: 12, padding: 16 }}>No commodity prices are available right now.</div>
       ) : (
@@ -1226,7 +1116,7 @@ function LivePricesDashboardWidget() {
           {livePrices.map((item, index) => (
             <div key={index} style={{ background: '#F1F4ED', borderRadius: 12, padding: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#1B4332' }}>{item.crop}</div>
-              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{item.symbol || item.source || 'Merchant price'}</div>
+              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{item.symbol || item.source || 'Commodity'}</div>
               <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#2E7D32' }}>{item.price}</div>
                 <div style={{ fontSize: 12, color: item.trend === 'up' ? '#2E7D32' : item.trend === 'down' ? '#C62828' : '#555', fontWeight: 600 }}>{item.trend === 'up' ? '↑' : item.trend === 'down' ? '↓' : '→'} {item.change}</div>
@@ -1240,18 +1130,28 @@ function LivePricesDashboardWidget() {
   );
 }
 
-function EarningsPage({ user }) {
-  const myDeliveries = DB.deliveries.filter(d => d.transportId === user.id);
+function EarningsPage() {
+  const [myDeliveries, setMyDeliveries] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getMyDeliveries()
+      .then(d => { if (mounted) setMyDeliveries(d.deliveries || []); })
+      .catch(() => { if (mounted) setMyDeliveries([]); });
+    return () => { mounted = false; };
+  }, []);
+
   const total = myDeliveries.reduce((a, b) => a + b.fee, 0);
   const completed = myDeliveries.filter(d => d.status === "Completed");
+
   return (
     <div>
       <h2 style={{ fontFamily: "'Crimson Pro',serif", fontSize: 28, color: "#1B4332", marginBottom: 20 }}>Earnings 💰</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>
         {[
           { label: "Total Earned", val: formatK(total), icon: "💰", color: "#E8F5E9" },
-          { label: "This Month", val: formatK(250), icon: "📅", color: "#FFF8E1" },
-          { label: "Deliveries Done", val: completed.length, icon: "✅", color: "#E3F2FD" },
+          { label: "Completed Deliveries", val: completed.length, icon: "✅", color: "#E3F2FD" },
+          { label: "Active Deliveries", val: myDeliveries.length - completed.length, icon: "🚛", color: "#FFF8E1" },
         ].map((s, i) => (
           <div key={i} className="stat-card" style={{ background: s.color }}>
             <div style={{ fontSize: 24, marginBottom: 8 }}>{s.icon}</div>
@@ -1290,25 +1190,45 @@ function RouteMapPage() {
    Root App
    =========================== */
 export default function App() {
-  const [user, setUser] = useState(loadCurrentUser);
+  const [user, setUser] = useState(null);
+  const [restoring, setRestoring] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [weather, setWeather] = useState(() => loadSavedWeather() || DB.weather);
+  const [weather, setWeather] = useState(() => loadSavedWeather());
   const [weatherStatus, setWeatherStatus] = useState({ loading: false, error: null });
 
+  // Restore session from stored JWT on first load.
   useEffect(() => {
-    if (user) {
-      saveCurrentUser(user);
-      setActiveTab("dashboard");
+    let mounted = true;
+    const token = getToken();
+    if (!token) {
+      setRestoring(false);
+      return;
     }
-  }, [user]);
+    api.me()
+      .then(d => {
+        if (!mounted) return;
+        const savedRole = loadActiveRole();
+        const restored = savedRole && d.user.roles.includes(savedRole) ? { ...d.user, role: savedRole } : d.user;
+        setUser(restored);
+      })
+      .catch(() => {
+        setToken(null);
+        saveActiveRole(null);
+      })
+      .finally(() => { if (mounted) setRestoring(false); });
+    return () => { mounted = false; };
+  }, []);
 
-  const handleLogin = (userData) => {
-    saveCurrentUser(userData);
+  const handleLogin = (userData, token) => {
+    setToken(token);
+    saveActiveRole(userData.role);
     setUser(userData);
+    setActiveTab("dashboard");
   };
 
   const handleLogout = () => {
-    saveCurrentUser(null);
+    setToken(null);
+    saveActiveRole(null);
     setUser(null);
   };
 
@@ -1318,11 +1238,15 @@ export default function App() {
     const handleGeoSuccess = async (position) => {
       const { latitude, longitude } = position.coords;
       setWeatherStatus({ loading: true, error: null });
-      const newWeather = await fetchWeatherByCoords(latitude, longitude);
-      if (newWeather) {
-        setWeather(newWeather);
-        saveWeather(newWeather);
-      } else {
+      try {
+        const data = await api.getWeather(latitude, longitude);
+        if (data.success && data.weather) {
+          setWeather(data.weather);
+          saveWeather(data.weather);
+        } else {
+          setWeatherStatus({ loading: false, error: "Unable to load real weather data." });
+        }
+      } catch {
         setWeatherStatus({ loading: false, error: "Unable to load real weather data." });
       }
       setWeatherStatus(prev => ({ ...prev, loading: false }));
@@ -1336,28 +1260,36 @@ export default function App() {
     navigator.geolocation.getCurrentPosition(handleGeoSuccess, handleGeoError, { timeout: 15000 });
   }, [user]);
 
+  if (restoring) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#2E7D32" }}>
+        Loading AgriConnect…
+      </div>
+    );
+  }
+
   if (!user) return <AuthScreen onLogin={handleLogin} />;
 
   const renderContent = () => {
     if (user.role === "customer") {
-      if (activeTab === "dashboard") return <CustomerDashboard user={user} />;
-      if (activeTab === "market") return <CustomerMarket user={user} />;
+      if (activeTab === "dashboard") return <CustomerDashboard user={user} weather={weather} />;
+      if (activeTab === "market") return <CustomerMarket />;
       if (activeTab === "crops") return <CropsPage />;
       if (activeTab === "weather") return <WeatherPage weather={weather} status={weatherStatus} />;
       if (activeTab === "community") return <CommunityPage user={user} />;
     }
     if (user.role === "supplier") {
-      if (activeTab === "dashboard") return <SupplierDashboard user={user} />;
-      if (activeTab === "inventory") return <SupplierInventory user={user} />;
-      if (activeTab === "orders") return <SupplierOrders user={user} />;
+      if (activeTab === "dashboard") return <SupplierDashboard />;
+      if (activeTab === "inventory") return <SupplierInventory />;
+      if (activeTab === "orders") return <SupplierOrders />;
       if (activeTab === "market") return <MarketPricesPage />;
       if (activeTab === "community") return <CommunityPage user={user} />;
     }
     if (user.role === "transport") {
       if (activeTab === "dashboard") return <TransportDashboard user={user} />;
-      if (activeTab === "deliveries") return <TransportDeliveries user={user} />;
+      if (activeTab === "deliveries") return <TransportDeliveries />;
       if (activeTab === "map") return <RouteMapPage />;
-      if (activeTab === "earnings") return <EarningsPage user={user} />;
+      if (activeTab === "earnings") return <EarningsPage />;
       if (activeTab === "community") return <CommunityPage user={user} />;
     }
     return <div>Coming soon</div>;
