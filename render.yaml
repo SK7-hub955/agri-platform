@@ -10,9 +10,9 @@ services:
     startCommand: npm start
     envVars:
       - key: GMAIL_USER
-        scope: build
+        sync: false
       - key: GMAIL_PASS
-        scope: build
+        sync: false
       - key: PORT
         value: "3001"
       - key: FRONTEND_URL
@@ -29,6 +29,6 @@ services:
     buildCommand: npm install && npm run build
     publishDirectory: dist
     envVars:
-      - key: REACT_APP_API_URL
+      - key: VITE_API_URL
         value: https://agri-platform-api.onrender.com
 

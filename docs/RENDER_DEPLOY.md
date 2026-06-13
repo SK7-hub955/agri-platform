@@ -149,7 +149,7 @@ Update the backend's environment variable:
 | Issue | Solution |
 |-------|----------|
 | **Backend won't start** | Check logs for email service errors. Verify GMAIL_USER and GMAIL_PASS in environment variables. |
-| **Frontend shows blank page** | Clear browser cache. Check browser console (F12) for errors. Verify REACT_APP_API_URL is correct. |
+| **Frontend shows blank page** | Clear browser cache. Check browser console (F12) for errors. Verify VITE_API_URL is correct. |
 | **Email not received** | Check backend logs for "Verification code sent". Verify GMAIL_PASS is correct (16 chars, no spaces). Check Gmail spam folder. |
 | **CORS errors in console** | Verify FRONTEND_URL in backend environment variables matches your frontend URL. Restart backend service. |
 | **Build failures** | Ensure all dependencies are in package.json. Check build command syntax. View full build logs in Render. |

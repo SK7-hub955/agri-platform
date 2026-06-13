@@ -7,8 +7,11 @@ agri-platform/
 ├── .gitignore                 # Protects .env files
 ├── .nojekyll                  # Tells Render to skip Jekyll
 ├── render.yaml                # Render deployment config
-├── RENDER_DEPLOY.md           # Detailed deployment guide
-├── SERVER_SETUP.md            # Local server setup guide
+├── README.md                  # Project overview & quick start
+├── docs/                      # Deployment & setup guides
+│   ├── RENDER_DEPLOY.md       # Detailed deployment guide
+│   ├── RENDER_CHECKLIST.md    # This checklist
+│   └── SERVER_SETUP.md        # Local server setup guide
 ├── package.json               # Workspace root scripts
 │
 ├── agri-platform/             # Frontend (React + Vite)
@@ -123,7 +126,7 @@ npm run server
    - Root: `agri-platform/`
    - Build: `npm install && npm run build`
    - Publish: `dist/`
-   - Set env vars: REACT_APP_API_URL
+   - Set env vars: VITE_API_URL
 
 3. **Update Backend FRONTEND_URL**
    - After frontend deploys, update backend's FRONTEND_URL env var
@@ -155,7 +158,7 @@ npm run server
 | Build fails | Run `npm run build` locally first |
 | Email not sent | Verify GMAIL_USER/GMAIL_PASS in backend env vars |
 | CORS error | Verify FRONTEND_URL in backend matches frontend domain |
-| Blank page | Check browser console (F12), verify REACT_APP_API_URL |
+| Blank page | Check browser console (F12), verify VITE_API_URL |
 | Cold start > 30s | Normal on free tier, upgrade to prevent |
 
 ## Security Reminders

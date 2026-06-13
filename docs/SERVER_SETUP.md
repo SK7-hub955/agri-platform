@@ -150,7 +150,7 @@ The frontend automatically connects to the backend at `http://localhost:3001` du
 
 To change the backend URL, set the environment variable:
 ```bash
-export REACT_APP_API_URL=http://your-backend-url:3001
+export VITE_API_URL=http://your-backend-url:3001
 ```
 
 ## Troubleshooting
